@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { format, parseISO, isWithinInterval, startOfDay, isBefore } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Edit, Printer, MessageCircle, Trash, ArrowLeft, Search, Archive } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Layout from '../components/Layout';
+import { api } from '../lib/api';
 
 export default function OrderAgenda() {
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showArchivedOrders, setShowArchivedOrders] = useState(false);
@@ -16,9 +20,22 @@ export default function OrderAgenda() {
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
 
+  // Carica gli ordini dal database
   useEffect(() => {
-    const storedOrders = localStorage.getItem('orders');
-    setOrders(storedOrders ? JSON.parse(storedOrders) : []);
+    const loadOrders = async () => {
+      try {
+        setIsLoading(true);
+        const data = await api.getOrders();
+        setOrders(data);
+      } catch (err) {
+        setError('Errore nel caricamento degli ordini');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrders();
   }, []);
 
   const filterOrders = () => {
@@ -51,79 +68,22 @@ export default function OrderAgenda() {
     });
   };
 
-  const printMultipleOrders = () => {
-    const start = parseISO(dateRange.startDate);
-    const end = parseISO(dateRange.endDate);
-
-    const ordersInRange = orders.filter(order => {
-      const orderDate = parseISO(order.date);
-      return isWithinInterval(orderDate, { start, end });
-    }).sort((a, b) => {
-      const dateA = new Date(a.date + 'T' + a.time);
-      const dateB = new Date(b.date + 'T' + b.time);
-      return dateA - dateB;
-    });
-
-    const printContent = `
-      <html>
-        <head>
-          <title>Lista Ordini</title>
-          <style>
-            @page {
-              margin: 2mm;
-              size: 80mm auto;
-            }
-            body {
-              font-family: Arial;
-              font-size: 12px;
-              margin: 0;
-              padding: 4mm;
-              width: 72mm;
-            }
-            .date-range {
-              text-align: center;
-              margin-bottom: 3mm;
-              font-weight: bold;
-            }
-            .order {
-              border-bottom: 1px dashed #000;
-              padding-bottom: 3mm;
-              margin-bottom: 3mm;
-            }
-            .order:last-child {
-              border-bottom: none;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="date-range">
-            Dal ${format(start, 'd MMMM yyyy', { locale: it })} 
-            al ${format(end, 'd MMMM yyyy', { locale: it })}
-          </div>
-          ${ordersInRange.map(order => {
-            const details = [];
-            details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
-            details.push(`Ora: ${order.time}`);
-            details.push(`Cliente: ${order.customerName}`);
-            if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
-            if (order.description) details.push(`\nDescrizione: ${order.description}`);
-            if (order.waferText) details.push(`Scritta: ${order.waferText}`);
-            if (order.waferDesign) details.push(`Disegno: ${order.waferDesign}`);
-            if (order.notes) details.push(`Note: ${order.notes}`);
-            if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
-            return `<div class="order">${details.join('<br>')}</div>`;
-          }).join('')}
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
-    setShowPrintModal(false);
+  const deleteOrder = async (orderId) => {
+    if (window.confirm('Sei sicuro di voler eliminare questo ordine?')) {
+      try {
+        await api.deleteOrder(orderId);
+        setOrders(orders.filter(order => order._id !== orderId));
+      } catch (err) {
+        setError('Errore nell\'eliminazione dell\'ordine');
+        console.error(err);
+      }
+    }
   };
+
+  const editOrder = (order) => {
+    router.push(`/orders?id=${order._id}`);
+  };
+
   const printOrder = (order) => {
     const details = [];
     details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
@@ -167,34 +127,88 @@ export default function OrderAgenda() {
     printWindow.print();
   };
 
+  const printMultipleOrders = () => {
+    const start = parseISO(dateRange.startDate);
+    const end = parseISO(dateRange.endDate);
+
+    const ordersInRange = orders.filter(order => {
+      const orderDate = parseISO(order.date);
+      return isWithinInterval(orderDate, { start, end });
+    }).sort((a, b) => {
+      const dateA = new Date(a.date + 'T' + a.time);
+      const dateB = new Date(b.date + 'T' + b.time);
+      return dateA - dateB;
+    });
+
+    const printContent = `
+      <html>
+        <head>
+          <style>
+            @page {
+              margin: 2mm;
+              size: 80mm auto;
+            }
+            body {
+              font-family: Arial;
+              font-size: 12px;
+              margin: 0;
+              padding: 4mm;
+              width: 72mm;
+            }
+            .date-range {
+              text-align: center;
+              margin-bottom: 3mm;
+              font-weight: bold;
+            }
+            .order {
+              border-bottom: 1px dashed #000;
+              padding-bottom: 3mm;
+              margin-bottom: 3mm;
+            }
+            .order:last-child {
+              border-bottom: none;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="date-range">
+            Dal ${format(start, 'd MMMM yyyy', { locale: it })} 
+            al ${format(end, 'd MMMM yyyy', { locale: it })}
+          </div>
+          ${ordersInRange.map(order => {
+            const details = [];
+            details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
+            details.push(`Ora: ${order.time}`);
+            details.push(`Cliente: ${order.customerName}`);
+            if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
+            if (order.description) details.push(`Descrizione: ${order.description}`);
+            if (order.waferText) details.push(`Scritta: ${order.waferText}`);
+            if (order.waferDesign) details.push(`Disegno: ${order.waferDesign}`);
+            if (order.notes) details.push(`Note: ${order.notes}`);
+            if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+            return `<div class="order">${details.join('<br>')}</div>`;
+          }).join('')}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+    setShowPrintModal(false);
+  };
   const sendWhatsApp = (order) => {
     const details = [];
     details.push(`📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
     details.push(`⏰ Ora: ${order.time}`);
     
-    if (order.description) {
-      details.push(`\n📝 Descrizione:`);
-      details.push(order.description);
-    }
-    
-    if (order.waferText) {
-      details.push(`\n✍️ Scritta:`);
-      details.push(order.waferText);
-    }
-    
-    if (order.waferDesign) {
-      details.push(`\n🎨 Disegno:`);
-      details.push(order.waferDesign);
-    }
-    
-    if (order.notes) {
-      details.push(`\n📌 Note:`);
-      details.push(order.notes);
-    }
-
-    if (order.deposit) {
-      details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
-    }
+    if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
+    if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
+    if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
+    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
+    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
 
     const message = details.join('\n').trim();
 
@@ -205,21 +219,10 @@ export default function OrderAgenda() {
     );
   };
 
-  const deleteOrder = (orderId) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo ordine?')) {
-      const updatedOrders = orders.filter(order => order.id !== orderId);
-      localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      setOrders(updatedOrders);
-    }
-  };
-
-  const editOrder = (order) => {
-    localStorage.setItem('editingOrder', JSON.stringify(order));
-    router.push('/orders');
-  };
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-6">
+        {/* Header con pulsanti */}
         <div className="flex justify-between items-center mb-6">
           <Link
             href="/"
@@ -260,6 +263,13 @@ export default function OrderAgenda() {
           {showArchivedOrders ? 'Archivio Ordini' : 'Agenda Ordini'}
         </h1>
 
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
+        {/* Barra di ricerca */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -272,6 +282,7 @@ export default function OrderAgenda() {
             />
           </div>
         </div>
+        {/* Modal Stampa */}
         {showPrintModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
@@ -318,97 +329,107 @@ export default function OrderAgenda() {
             </div>
           </div>
         )}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[#8B4513] text-white">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Data e Ora</th>
-                  <th className="px-4 py-3 font-medium">Cliente</th>
-                  <th className="px-4 py-3 font-medium">Dettagli Ordine</th>
-                  <th className="px-4 py-3 font-medium text-right">Azioni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {getFilteredOrders().sort((a, b) => {
-                  const dateA = new Date(a.date + 'T' + a.time);
-                  const dateB = new Date(b.date + 'T' + b.time);
-                  return dateA - dateB;
-                }).map(order => (
-                  <tr key={order.id} className="hover:bg-amber-50">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="font-medium text-[#8B4513]">
-                        {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {order.time}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{order.customerName}</div>
-                      <div className="text-sm text-gray-600">{order.customerContact}</div>
-                      {order.deposit && (
-                        <div className="text-sm text-green-600">
-                          Acconto: €{parseFloat(order.deposit).toFixed(2)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="line-clamp-2">
-                        {order.description && (
-                          <div><span className="font-medium">Descrizione:</span> {order.description}</div>
-                        )}
-                        {order.waferText && (
-                          <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
-                        )}
-                        {order.waferDesign && (
-                          <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
-                        )}
-                        {order.notes && (
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Note:</span> {order.notes}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => printOrder(order)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Stampa"
-                        >
-                          <Printer className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => sendWhatsApp(order)}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                          title="WhatsApp"
-                        >
-                          <MessageCircle className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => editOrder(order)}
-                          className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
-                          title="Modifica"
-                        >
-                          <Edit className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => deleteOrder(order.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Elimina"
-                        >
-                          <Trash className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+        {/* Tabella Ordini */}
+        {isLoading ? (
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-[#8B4513] text-white">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Data e Ora</th>
+                    <th className="px-4 py-3 font-medium">Cliente</th>
+                    <th className="px-4 py-3 font-medium">Dettagli Ordine</th>
+                    <th className="px-4 py-3 font-medium text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {getFilteredOrders()
+                    .sort((a, b) => {
+                      const dateA = new Date(a.date + 'T' + a.time);
+                      const dateB = new Date(b.date + 'T' + b.time);
+                      return dateA - dateB;
+                    })
+                    .map(order => (
+                      <tr key={order._id} className="hover:bg-amber-50">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="font-medium text-[#8B4513]">
+                            {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {order.time}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{order.customerName}</div>
+                          <div className="text-sm text-gray-600">{order.customerContact}</div>
+                          {order.deposit && (
+                            <div className="text-sm text-green-600">
+                              Acconto: €{parseFloat(order.deposit).toFixed(2)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="line-clamp-2">
+                            {order.description && (
+                              <div><span className="font-medium">Descrizione:</span> {order.description}</div>
+                            )}
+                            {order.waferText && (
+                              <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
+                            )}
+                            {order.waferDesign && (
+                              <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
+                            )}
+                            {order.notes && (
+                              <div className="text-sm text-gray-600">
+                                <span className="font-medium">Note:</span> {order.notes}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => printOrder(order)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                              title="Stampa"
+                            >
+                              <Printer className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => sendWhatsApp(order)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+                              title="WhatsApp"
+                            >
+                              <MessageCircle className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => editOrder(order)}
+                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
+                              title="Modifica"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => deleteOrder(order._id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                              title="Elimina"
+                            >
+                              <Trash className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

@@ -1,16 +1,17 @@
-import React from 'react';
-import { ArrowLeft, Calendar, Clock, Save } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Save, ArrowLeft, EuroIcon } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import Layout from '../components/Layout';
+import { api } from '../lib/api';
 
 export default function OrderManager() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const [currentOrder, setCurrentOrder] = React.useState({
-    id: null,
+  const { id } = router.query; // Per modifiche di ordini esistenti
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [currentOrder, setCurrentOrder] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     time: '07:00',
     description: '',
@@ -21,43 +22,49 @@ export default function OrderManager() {
     customerContact: '',
     deposit: ''
   });
-  const [isEditing, setIsEditing] = React.useState(false);
 
-  React.useEffect(() => {
-    const editingOrder = localStorage.getItem('editingOrder');
-    if (editingOrder) {
-      const parsedOrder = JSON.parse(editingOrder);
-      setCurrentOrder({
-        ...parsedOrder,
-        deposit: parsedOrder.deposit || ''
-      });
-      setIsEditing(true);
-      localStorage.removeItem('editingOrder');
-    }
-  }, []);
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    
-    const formattedOrder = {
-      ...currentOrder,
-      deposit: currentOrder.deposit ? parseFloat(currentOrder.deposit).toFixed(2) : ''
-    };
-    
-    if (isEditing) {
-      const updatedOrders = existingOrders.map(order => 
-        order.id === currentOrder.id ? formattedOrder : order
-      );
-      localStorage.setItem('orders', JSON.stringify(updatedOrders));
-    } else {
-      const newOrder = {
-        ...formattedOrder,
-        id: Date.now()
+  // Carica l'ordine se siamo in modalità modifica
+  useEffect(() => {
+    if (id) {
+      const loadOrder = async () => {
+        try {
+          setIsLoading(true);
+          const order = await api.getOrders();
+          const foundOrder = order.find(o => o._id === id);
+          if (foundOrder) {
+            setCurrentOrder(foundOrder);
+          }
+        } catch (err) {
+          setError('Errore nel caricamento dell\'ordine');
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
       };
-      localStorage.setItem('orders', JSON.stringify([...existingOrders, newOrder]));
+      loadOrder();
     }
-    
-    router.push('/agenda');
+  }, [id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      if (id) {
+        // Aggiorna ordine esistente
+        await api.updateOrder(id, currentOrder);
+      } else {
+        // Crea nuovo ordine
+        await api.createOrder(currentOrder);
+      }
+      router.push('/agenda');
+    } catch (err) {
+      setError('Errore nel salvataggio dell\'ordine');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDepositChange = (e) => {
@@ -66,6 +73,17 @@ export default function OrderManager() {
       setCurrentOrder({...currentOrder, deposit: value});
     }
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+          <div className="text-2xl font-bold text-[#8B4513]">Caricamento...</div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-6">
@@ -84,12 +102,20 @@ export default function OrderManager() {
             Agenda Ordini
           </Link>
         </div>
+
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-[#8B4513] mb-6">
-            {isEditing ? 'Modifica Ordine' : 'Nuovo Ordine'}
+            {id ? 'Modifica Ordine' : 'Nuovo Ordine'}
           </h1>
-          
+
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
+            {/* Data */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -106,7 +132,8 @@ export default function OrderManager() {
                   />
                 </div>
               </div>
-              
+
+              {/* Ora */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ora
@@ -157,6 +184,8 @@ export default function OrderManager() {
                 </div>
               </div>
             </div>
+
+            {/* Descrizione */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Descrizione Ordine
@@ -169,6 +198,7 @@ export default function OrderManager() {
               />
             </div>
 
+            {/* Cialda */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -194,6 +224,8 @@ export default function OrderManager() {
                 />
               </div>
             </div>
+
+            {/* Note */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Note
@@ -205,6 +237,7 @@ export default function OrderManager() {
               />
             </div>
 
+            {/* Cliente e Acconto */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -237,18 +270,19 @@ export default function OrderManager() {
                   Acconto €
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
+                  <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                   <input
                     type="text"
                     value={currentOrder.deposit}
                     onChange={handleDepositChange}
                     placeholder="0.00"
-                    className="w-full p-2 pl-8 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+                    className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
               </div>
             </div>
 
+            {/* Pulsanti */}
             <div className="flex justify-end gap-2">
               <Link
                 href="/agenda"
@@ -258,10 +292,11 @@ export default function OrderManager() {
               </Link>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D]"
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
-                {isEditing ? 'Aggiorna' : 'Salva'}
+                {isLoading ? 'Salvataggio...' : (id ? 'Aggiorna' : 'Salva')}
               </button>
             </div>
           </form>
