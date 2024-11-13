@@ -3,6 +3,8 @@ import { Upload, ArrowLeft, Search, Trash, Printer, X, ChevronLeft, ChevronRight
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Layout from '../components/Layout';
+import { api } from '../lib/api';
+import { toast } from 'sonner';
 
 const InvoiceManager = () => {
   const [invoices, setInvoices] = useState([]);
@@ -14,34 +16,27 @@ const InvoiceManager = () => {
   const suppliers = ['CEDIAL', 'DOLCIFORNITURE', 'EUROVO', 'NOVASERVICE', 'PENTACARTA', 'PREGEL'];
 
   useEffect(() => {
-    const storedInvoices = localStorage.getItem('invoices');
-    const storedProducts = localStorage.getItem('products');
-    if (storedInvoices) setInvoices(JSON.parse(storedInvoices));
-    if (storedProducts) {
-      const productsData = JSON.parse(storedProducts);
-      // Assicuriamo che ogni prodotto abbia un ID
-      const productsWithIds = productsData.map(product => ({
-        ...product,
-        id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
-      }));
-      setProducts(productsWithIds);
-    }
+    loadData();
   }, []);
 
-  const clearAllData = () => {
-    if (window.confirm('Sei sicuro di voler eliminare tutti i dati? Questa azione non può essere annullata.')) {
-      localStorage.removeItem('invoices');
-      localStorage.removeItem('products');
-      setInvoices([]);
-      setProducts([]);
-    }
-  };
-
-  const deleteProduct = (productToDelete) => {
-    if (window.confirm(`Sei sicuro di voler eliminare il prodotto "${productToDelete.name}"?`)) {
-      const updatedProducts = products.filter(product => product.id !== productToDelete.id);
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
+  const loadData = async () => {
+    try {
+      const invoicesData = await api.getInvoices();
+      setInvoices(invoicesData);
+      
+      // Per ora manteniamo i prodotti in localStorage finché non creiamo un modello Products
+      const storedProducts = localStorage.getItem('products');
+      if (storedProducts) {
+        const productsData = JSON.parse(storedProducts);
+        const productsWithIds = productsData.map(product => ({
+          ...product,
+          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
+        }));
+        setProducts(productsWithIds);
+      }
+    } catch (error) {
+      console.error('Errore nel caricamento dei dati:', error);
+      toast.error('Errore nel caricamento dei dati');
     }
   };
   const identifySupplier = (xmlDoc) => {
@@ -86,6 +81,7 @@ const InvoiceManager = () => {
     
     return !excludeTexts.some(text => descrizione.toLowerCase().includes(text.toLowerCase()));
   };
+
   const parseXML = (xmlString) => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "application/xml");
@@ -129,11 +125,40 @@ const InvoiceManager = () => {
 
     return { date: invoiceDate, supplier, products };
   };
+  const clearAllData = async () => {
+    if (window.confirm('Sei sicuro di voler eliminare tutti i dati? Questa azione non può essere annullata.')) {
+      try {
+        // Elimina tutte le fatture dal database
+        const allInvoices = await api.getInvoices();
+        for (const invoice of allInvoices) {
+          await api.deleteInvoice(invoice._id);
+        }
+        
+        // Pulisci i prodotti dal localStorage
+        localStorage.removeItem('products');
+        
+        setInvoices([]);
+        setProducts([]);
+        toast.success('Tutti i dati sono stati eliminati');
+      } catch (error) {
+        console.error('Errore nell\'eliminazione dei dati:', error);
+        toast.error('Errore nell\'eliminazione dei dati');
+      }
+    }
+  };
+
+  const deleteProduct = (productToDelete) => {
+    if (window.confirm(`Sei sicuro di voler eliminare il prodotto "${productToDelete.name}"?`)) {
+      const updatedProducts = products.filter(product => product.id !== productToDelete.id);
+      setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      toast.success('Prodotto eliminato con successo');
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     let allNewProducts = [];
-    let newInvoices = [];
     
     try {
       for (const file of files) {
@@ -141,19 +166,20 @@ const InvoiceManager = () => {
         const { date, supplier, products: fileProducts } = parseXML(text);
         allNewProducts = [...allNewProducts, ...fileProducts];
 
-        newInvoices.push({
-          id: Date.now() + Math.random(),
+        // Crea la fattura nel database
+        await api.createInvoice({
           date,
-          file: text,
           supplier,
-          fileName: file.name
+          fileName: file.name,
+          file: text,
+          createdAt: new Date()
         });
       }
 
-      const updatedInvoices = [...invoices, ...newInvoices];
-      setInvoices(updatedInvoices);
-      localStorage.setItem('invoices', JSON.stringify(updatedInvoices));
+      // Aggiorna la lista delle fatture
+      await loadData();
 
+      // Aggiorna i prodotti nel localStorage
       const updatedProducts = [...products];
       
       allNewProducts.forEach(newProduct => {
@@ -201,9 +227,10 @@ const InvoiceManager = () => {
       setProducts(updatedProducts);
       localStorage.setItem('products', JSON.stringify(updatedProducts));
       
+      toast.success('Fatture caricate con successo');
     } catch (error) {
       console.error('Errore nel caricamento dei file:', error);
-      alert('Si è verificato un errore nel caricamento di alcuni file');
+      toast.error('Si è verificato un errore nel caricamento di alcuni file');
     }
   };
   const getSupplierInvoiceDates = (supplierProducts) => {
@@ -246,67 +273,66 @@ const InvoiceManager = () => {
   const supplierDates = selectedSupplier 
     ? getSupplierInvoiceDates(currentSupplierProducts)
     : [];
-
-  return (
-    <Layout>
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Torna alla Home
-          </Link>
-          <div className="flex gap-2">
-            <button
-              onClick={clearAllData}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D]"
             >
-              <Trash className="h-5 w-5" />
-              Cancella Tutto
-            </button>
-            <label className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] cursor-pointer">
-              <input
-                type="file"
-                accept=".xml"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <Upload className="h-5 w-5 inline-block mr-2" />
-              Carica Fatture
-            </label>
-          </div>
-        </div>
-        <div className="mb-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
+              Torna alla Home
+            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={clearAllData}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+              >
+                <Trash className="h-5 w-5" />
+                Cancella Tutto
+              </button>
+              <label className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] cursor-pointer">
                 <input
-                  type="text"
-                  placeholder="Cerca prodotto..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  type="file"
+                  accept=".xml"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
-              </div>
+                <Upload className="h-5 w-5 inline-block mr-2" />
+                Carica Fatture
+              </label>
             </div>
-            <select
-              value={selectedSupplier}
-              onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="w-48 p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-            >
-              <option value="">Seleziona fornitore</option>
-              {suppliers.map(supplier => (
-                <option key={supplier} value={supplier}>{supplier}</option>
-              ))}
-            </select>
           </div>
-        </div>
-
-        {selectedSupplier ? (
+  
+          <div className="mb-6">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    placeholder="Cerca prodotto..."
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <select
+                value={selectedSupplier}
+                onChange={(e) => setSelectedSupplier(e.target.value)}
+                className="w-48 p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+              >
+                <option value="">Seleziona fornitore</option>
+                {suppliers.map(supplier => (
+                  <option key={supplier} value={supplier}>{supplier}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {selectedSupplier ? (
           <div>
             <div className="flex justify-end gap-2 mb-2">
               <button
@@ -386,7 +412,7 @@ const InvoiceManager = () => {
             Seleziona un fornitore per visualizzare i prodotti
           </div>
         )}
-      </div>
+        </div>
     </Layout>
   );
 };
