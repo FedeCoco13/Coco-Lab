@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowLeft, Search, Trash, Printer, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ const InvoiceManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [scrollPosition, setScrollPosition] = useState(0);
+  const tableRef = useRef(null);
 
   const suppliers = ['CEDIAL', 'DOLCIFORNITURE', 'EUROVO', 'NOVASERVICE', 'PENTACARTA', 'PREGEL'];
 
@@ -24,7 +25,6 @@ const InvoiceManager = () => {
       const invoicesData = await api.getInvoices();
       setInvoices(invoicesData);
       
-      // Per ora manteniamo i prodotti in localStorage finché non creiamo un modello Products
       const storedProducts = localStorage.getItem('products');
       if (storedProducts) {
         const productsData = JSON.parse(storedProducts);
@@ -39,6 +39,75 @@ const InvoiceManager = () => {
       toast.error('Errore nel caricamento dei dati');
     }
   };
+  // Funzioni di gestione scroll e touch
+  const handleScroll = (direction) => {
+    if (tableRef.current) {
+      const scrollAmount = 200;
+      const currentScroll = tableRef.current.scrollLeft;
+      const targetScroll = direction === 'left' ? 
+        currentScroll - scrollAmount : 
+        currentScroll + scrollAmount;
+
+      tableRef.current.scrollTo({
+        left: targetScroll,
+        behavior: 'smooth'
+      });
+      setScrollPosition(targetScroll);
+    }
+  };
+
+  const handleTouchScroll = (e) => {
+    if (!tableRef.current) return;
+    
+    const touchDelta = e.touches[0].clientX - startTouchRef.current;
+    const sensitivity = 1.5; // Aumenta o diminuisci per modificare la sensibilità dello scroll
+    
+    tableRef.current.scrollLeft = scrollStartRef.current - (touchDelta * sensitivity);
+  };
+
+  const startTouchRef = useRef(0);
+  const scrollStartRef = useRef(0);
+
+  const handleTouchStart = (e) => {
+    if (!tableRef.current) return;
+    
+    startTouchRef.current = e.touches[0].clientX;
+    scrollStartRef.current = tableRef.current.scrollLeft;
+    
+    tableRef.current.addEventListener('touchmove', handleTouchScroll);
+  };
+
+  const handleTouchEnd = () => {
+    if (!tableRef.current) return;
+    tableRef.current.removeEventListener('touchmove', handleTouchScroll);
+  };
+  const clearAllData = async () => {
+    if (window.confirm('Sei sicuro di voler eliminare tutti i dati? Questa azione non può essere annullata.')) {
+      try {
+        const allInvoices = await api.getInvoices();
+        for (const invoice of allInvoices) {
+          await api.deleteInvoice(invoice._id);
+        }
+        localStorage.removeItem('products');
+        setInvoices([]);
+        setProducts([]);
+        toast.success('Tutti i dati sono stati eliminati');
+      } catch (error) {
+        console.error('Errore nell\'eliminazione dei dati:', error);
+        toast.error('Errore nell\'eliminazione dei dati');
+      }
+    }
+  };
+
+  const deleteProduct = (productToDelete) => {
+    if (window.confirm(`Sei sicuro di voler eliminare il prodotto "${productToDelete.name}"?`)) {
+      const updatedProducts = products.filter(product => product.id !== productToDelete.id);
+      setProducts(updatedProducts);
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      toast.success('Prodotto eliminato con successo');
+    }
+  };
+
   const identifySupplier = (xmlDoc) => {
     const denominazione = xmlDoc.querySelector("CedentePrestatore DatiAnagrafici Anagrafica Denominazione");
     const partitaIva = xmlDoc.querySelector("CedentePrestatore DatiAnagrafici IdFiscaleIVA IdCodice");
@@ -48,6 +117,7 @@ const InvoiceManager = () => {
     const name = denominazione.textContent.toUpperCase();
     const piva = partitaIva?.textContent;
 
+    // ... resto del codice per l'identificazione del fornitore ...
     if (name.includes('CE.DI.AL.')) return 'CEDIAL';
     if (name.includes('NOVASERVICE')) return 'NOVASERVICE';
     if (name.includes('DOLCI FORNITURE')) return 'DOLCIFORNITURE';
@@ -64,22 +134,6 @@ const InvoiceManager = () => {
       case '01851810362': return 'PREGEL';
       default: return '';
     }
-  };
-
-  const isValidProduct = (linea) => {
-    const descrizione = linea.querySelector("Descrizione")?.textContent || '';
-    
-    const excludeTexts = [
-      "Ordine Cl. num.",
-      "Preord. Cl. num.",
-      "Contributo",
-      "CONTRIBUTO",
-      "Aggiunta",
-      "conai",
-      "CONAI"
-    ];
-    
-    return !excludeTexts.some(text => descrizione.toLowerCase().includes(text.toLowerCase()));
   };
 
   const parseXML = (xmlString) => {
@@ -125,113 +179,96 @@ const InvoiceManager = () => {
 
     return { date: invoiceDate, supplier, products };
   };
-  const clearAllData = async () => {
-    if (window.confirm('Sei sicuro di voler eliminare tutti i dati? Questa azione non può essere annullata.')) {
-      try {
-        // Elimina tutte le fatture dal database
-        const allInvoices = await api.getInvoices();
-        for (const invoice of allInvoices) {
-          await api.deleteInvoice(invoice._id);
-        }
-        
-        // Pulisci i prodotti dal localStorage
-        localStorage.removeItem('products');
-        
-        setInvoices([]);
-        setProducts([]);
-        toast.success('Tutti i dati sono stati eliminati');
-      } catch (error) {
-        console.error('Errore nell\'eliminazione dei dati:', error);
-        toast.error('Errore nell\'eliminazione dei dati');
-      }
-    }
-  };
-
-  const deleteProduct = (productToDelete) => {
-    if (window.confirm(`Sei sicuro di voler eliminare il prodotto "${productToDelete.name}"?`)) {
-      const updatedProducts = products.filter(product => product.id !== productToDelete.id);
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      toast.success('Prodotto eliminato con successo');
-    }
-  };
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    let allNewProducts = [];
-    
     try {
       for (const file of files) {
         const text = await file.text();
         const { date, supplier, products: fileProducts } = parseXML(text);
-        allNewProducts = [...allNewProducts, ...fileProducts];
 
-        // Crea la fattura nel database
         await api.createInvoice({
           date,
           supplier,
           fileName: file.name,
           file: text,
-          createdAt: new Date()
+          products: fileProducts
         });
+
+        updateProducts(fileProducts);
       }
-
-      // Aggiorna la lista delle fatture
+      
       await loadData();
-
-      // Aggiorna i prodotti nel localStorage
-      const updatedProducts = [...products];
-      
-      allNewProducts.forEach(newProduct => {
-        const existingProductIndex = updatedProducts.findIndex(p => p.id === newProduct.id);
-        
-        if (existingProductIndex !== -1) {
-          const existingProduct = updatedProducts[existingProductIndex];
-          if (!existingProduct.priceHistory) {
-            existingProduct.priceHistory = [];
-          }
-          
-          const priceExists = existingProduct.priceHistory.some(
-            ph => ph.date === newProduct.date
-          );
-          
-          if (!priceExists) {
-            existingProduct.priceHistory.push({
-              date: newProduct.date,
-              price: newProduct.price,
-              quantity: newProduct.quantity,
-              discounts: newProduct.discounts
-            });
-            
-            existingProduct.priceHistory.sort((a, b) => 
-              new Date(b.date) - new Date(a.date)
-            );
-
-            if (!existingProduct.iva && newProduct.iva) {
-              existingProduct.iva = newProduct.iva;
-            }
-          }
-        } else {
-          updatedProducts.push({
-            ...newProduct,
-            priceHistory: [{
-              date: newProduct.date,
-              price: newProduct.price,
-              quantity: newProduct.quantity,
-              discounts: newProduct.discounts
-            }]
-          });
-        }
-      });
-      
-      setProducts(updatedProducts);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      
       toast.success('Fatture caricate con successo');
     } catch (error) {
       console.error('Errore nel caricamento dei file:', error);
-      toast.error('Si è verificato un errore nel caricamento di alcuni file');
+      toast.error('Si è verificato un errore nel caricamento dei file');
     }
+  };
+
+  const updateProducts = (newProducts) => {
+    const updatedProducts = [...products];
+    
+    newProducts.forEach(newProduct => {
+      const existingProductIndex = updatedProducts.findIndex(p => p.id === newProduct.id);
+      
+      if (existingProductIndex !== -1) {
+        const existingProduct = updatedProducts[existingProductIndex];
+        if (!existingProduct.priceHistory) {
+          existingProduct.priceHistory = [];
+        }
+        
+        const priceExists = existingProduct.priceHistory.some(
+          ph => ph.date === newProduct.date
+        );
+        
+        if (!priceExists) {
+          existingProduct.priceHistory.push({
+            date: newProduct.date,
+            price: newProduct.price,
+            quantity: newProduct.quantity,
+            discounts: newProduct.discounts
+          });
+          
+          existingProduct.priceHistory.sort((a, b) => 
+            new Date(b.date) - new Date(a.date)
+          );
+
+          if (!existingProduct.iva && newProduct.iva) {
+            existingProduct.iva = newProduct.iva;
+          }
+        }
+      } else {
+        updatedProducts.push({
+          ...newProduct,
+          priceHistory: [{
+            date: newProduct.date,
+            price: newProduct.price,
+            quantity: newProduct.quantity,
+            discounts: newProduct.discounts
+          }]
+        });
+      }
+    });
+    
+    setProducts(updatedProducts);
+    localStorage.setItem('products', JSON.stringify(updatedProducts));
+  };
+
+  const isValidProduct = (linea) => {
+    const descrizione = linea.querySelector("Descrizione")?.textContent || '';
+    
+    const excludeTexts = [
+      "Ordine Cl. num.",
+      "Preord. Cl. num.",
+      "Contributo",
+      "CONTRIBUTO",
+      "Aggiunta",
+      "conai",
+      "CONAI"
+    ];
+    
+    return !excludeTexts.some(text => descrizione.toLowerCase().includes(text.toLowerCase()));
   };
   const getSupplierInvoiceDates = (supplierProducts) => {
     const allDates = new Set();
@@ -246,19 +283,6 @@ const InvoiceManager = () => {
   const getProductPriceForDate = (product, date) => {
     const priceRecord = product.priceHistory?.find(history => history.date === date);
     return priceRecord || null;
-  };
-
-  const handleScroll = (direction) => {
-    const container = document.querySelector('.table-container');
-    const scrollAmount = 200;
-    if (container) {
-      if (direction === 'left') {
-        container.scrollLeft -= scrollAmount;
-      } else {
-        container.scrollLeft += scrollAmount;
-      }
-      setScrollPosition(container.scrollLeft);
-    }
   };
 
   const filteredProducts = products.filter(product => {
@@ -307,7 +331,7 @@ const InvoiceManager = () => {
           </div>
   
           <div className="mb-6">
-            <div className="flex gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -323,7 +347,7 @@ const InvoiceManager = () => {
               <select
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
-                className="w-48 p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+                className="w-full md:w-48 p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
               >
                 <option value="">Seleziona fornitore</option>
                 {suppliers.map(supplier => (
@@ -337,73 +361,80 @@ const InvoiceManager = () => {
             <div className="flex justify-end gap-2 mb-2">
               <button
                 onClick={() => handleScroll('left')}
-                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800"
+                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 onClick={() => handleScroll('right')}
-                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800"
+                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B4513]"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg">
-              <div className="table-container overflow-auto max-h-[calc(100vh-250px)]">
-                <table className="w-full text-left">
-                  <thead className="bg-[#8B4513] text-white sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 font-medium sticky left-0 bg-[#8B4513] z-20 whitespace-nowrap">
-                        Prodotto
-                      </th>
-                      <th className="px-4 py-3 font-medium sticky left-[250px] bg-[#8B4513] z-20 whitespace-nowrap text-center">
-                        IVA %
-                      </th>
-                      {supplierDates.map((date) => (
-                        <th key={date} className="px-4 py-3 font-medium min-w-[200px] text-center whitespace-nowrap">
-                          {new Date(date).toLocaleDateString('it-IT')}
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <div 
+                ref={tableRef}
+                className="overflow-x-auto w-full touch-pan-x"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                <div className="min-w-full inline-block align-middle">
+                  <table className="min-w-full">
+                    <thead className="bg-[#8B4513] text-white">
+                      <tr>
+                        <th className="sticky left-0 z-20 bg-[#8B4513] p-4 text-left font-medium whitespace-nowrap min-w-[200px]">
+                          Prodotto
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-300">
-                    {currentSupplierProducts.map((product) => (
-                      <tr key={product.id} className="hover:bg-amber-50">
-                        <td className="px-4 py-3 font-medium sticky left-0 bg-white border-r whitespace-nowrap">
-                          <div className="flex justify-between items-center">
-                            <span>{product.name}</span>
-                            <button
-                              onClick={() => deleteProduct(product)}
-                              className="ml-2 text-red-600 hover:bg-red-50 p-1 rounded"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center sticky left-[250px] bg-white border-r">
-                          {product.iva}%
-                        </td>
-                        {supplierDates.map((date) => {
-                          const priceRecord = getProductPriceForDate(product, date);
-                          return (
-                            <td key={date} className="px-4 py-3 text-center border-r">
-                              {priceRecord && (
-                                <>
-                                  <div>Q: {priceRecord.quantity}</div>
-                                  <div>P: €{priceRecord.price.toFixed(2)}</div>
-                                  {priceRecord.discounts && priceRecord.discounts.length > 0 && (
-                                    <div>S: {priceRecord.discounts.join(', ')}%</div>
-                                  )}
-                                </>
-                              )}
-                            </td>
-                          );
-                        })}
+                        <th className="sticky left-[200px] z-20 bg-[#8B4513] p-4 text-center font-medium whitespace-nowrap min-w-[100px]">
+                          IVA %
+                        </th>
+                        {supplierDates.map((date) => (
+                          <th key={date} className="p-4 text-center font-medium whitespace-nowrap min-w-[150px]">
+                            {new Date(date).toLocaleDateString('it-IT')}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {currentSupplierProducts.map((product) => (
+                        <tr key={product.id} className="hover:bg-amber-50">
+                          <td className="sticky left-0 bg-white border-r p-4 text-sm whitespace-nowrap">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{product.name}</span>
+                              <button
+                                onClick={() => deleteProduct(product)}
+                                className="ml-2 text-red-600 hover:bg-red-50 p-1 rounded"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="sticky left-[200px] bg-white border-r p-4 text-center text-sm">
+                            {product.iva}%
+                          </td>
+                          {supplierDates.map((date) => {
+                            const priceRecord = getProductPriceForDate(product, date);
+                            return (
+                              <td key={date} className="p-4 text-center text-sm border-r">
+                                {priceRecord && (
+                                  <div className="space-y-1">
+                                    <div>Q: {priceRecord.quantity}</div>
+                                    <div>P: €{priceRecord.price.toFixed(2)}</div>
+                                    {priceRecord.discounts && priceRecord.discounts.length > 0 && (
+                                      <div>S: {priceRecord.discounts.join(', ')}%</div>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
