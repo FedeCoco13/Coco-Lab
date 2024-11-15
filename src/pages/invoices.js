@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, ArrowLeft, Search, Trash, Printer, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, ArrowLeft, Search, Trash, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Layout from '../components/Layout';
@@ -7,84 +7,78 @@ import { api } from '../lib/api';
 import { toast } from 'sonner';
 
 const InvoiceManager = () => {
-  const { data: session } = useSession();
   const [invoices, setInvoices] = useState([]);
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
-  const [scrollPosition, setScrollPosition] = useState(0);
   const tableRef = useRef(null);
-  const startTouchRef = useRef(0);
-  const scrollStartRef = useRef(0);
 
   const suppliers = ['CEDIAL', 'DOLCIFORNITURE', 'EUROVO', 'NOVASERVICE', 'PENTACARTA', 'PREGEL'];
 
   useEffect(() => {
-    if (session) {
-      loadData();
-    }
-  }, [session]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
-      console.log('Fetching invoices...');
       const invoicesData = await api.getInvoices();
-      console.log('Invoices fetched:', invoicesData.length);
       setInvoices(invoicesData);
+      const allProducts = {};
       
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const productsData = JSON.parse(storedProducts);
-        const productsWithIds = productsData.map(product => ({
-          ...product,
-          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
-        }));
-        setProducts(productsWithIds);
-      }
+      invoicesData.forEach(invoice => {
+        invoice.products.forEach(product => {
+          if (!allProducts[product.id]) {
+            allProducts[product.id] = {
+              ...product,
+              priceHistory: []
+            };
+          }
+          allProducts[product.id].priceHistory.push({
+            date: invoice.date,
+            price: product.price,
+            quantity: product.quantity,
+            discounts: product.discounts
+          });
+        });
+      });
+
+      Object.values(allProducts).forEach(product => {
+        product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+      });
+
+      setProducts(Object.values(allProducts));
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Errore nel caricamento dei dati:', error);
       toast.error('Errore nel caricamento dei dati');
     }
   };
-  const handleScroll = (direction) => {
-    if (tableRef.current) {
-      const scrollAmount = 200;
-      const currentScroll = tableRef.current.scrollLeft;
-      const targetScroll = direction === 'left' ? 
-        currentScroll - scrollAmount : 
-        currentScroll + scrollAmount;
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    try {
+      for (const file of files) {
+        const text = await file.text();
+        const { date, supplier, products: fileProducts } = parseXML(text);
 
-      tableRef.current.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
-      });
-      setScrollPosition(targetScroll);
+        await api.createInvoice({
+          date,
+          supplier,
+          fileName: file.name,
+          file: text,
+          products: fileProducts
+        });
+      }
+      
+      await loadData();
+      toast.success('Fatture caricate con successo');
+    } catch (error) {
+      console.error('Errore nel caricamento dei file:', error);
+      toast.error('Errore nel caricamento dei file');
     }
-  };
-
-  const handleTouchScroll = (e) => {
-    if (!tableRef.current) return;
-    const touchDelta = e.touches[0].clientX - startTouchRef.current;
-    const sensitivity = 1.5;
-    tableRef.current.scrollLeft = scrollStartRef.current - (touchDelta * sensitivity);
-  };
-
-  const handleTouchStart = (e) => {
-    if (!tableRef.current) return;
-    startTouchRef.current = e.touches[0].clientX;
-    scrollStartRef.current = tableRef.current.scrollLeft;
-    tableRef.current.addEventListener('touchmove', handleTouchScroll);
-  };
-
-  const handleTouchEnd = () => {
-    if (!tableRef.current) return;
-    tableRef.current.removeEventListener('touchmove', handleTouchScroll);
   };
 
   const clearAllData = async () => {
     if (window.confirm('Sei sicuro di voler eliminare tutti i dati? Questa azione non può essere annullata.')) {
       try {
-        console.log('Deleting all invoices...');
         const allInvoices = await api.getInvoices();
         for (const invoice of allInvoices) {
           await api.deleteInvoice(invoice._id);
@@ -94,7 +88,7 @@ const InvoiceManager = () => {
         setProducts([]);
         toast.success('Tutti i dati sono stati eliminati');
       } catch (error) {
-        console.error('Error deleting data:', error);
+        console.error('Errore nell\'eliminazione dei dati:', error);
         toast.error('Errore nell\'eliminazione dei dati');
       }
     }
@@ -117,40 +111,25 @@ const InvoiceManager = () => {
     
     const name = denominazione.textContent.toUpperCase();
     const piva = partitaIva?.textContent;
+
+    if (name.includes('CE.DI.AL.')) return 'CEDIAL';
+    if (name.includes('NOVASERVICE')) return 'NOVASERVICE';
+    if (name.includes('DOLCI FORNITURE')) return 'DOLCIFORNITURE';
+    if (name.includes('EUROVO')) return 'EUROVO';
+    if (name.includes('PENTA CARTA')) return 'PENTACARTA';
+    if (name.includes('PREGEL')) return 'PREGEL';
     
-    switch (true) {
-      case name.includes('CE.DI.AL.'): return 'CEDIAL';
-      case name.includes('NOVASERVICE'): return 'NOVASERVICE';
-      case name.includes('DOLCI FORNITURE'): return 'DOLCIFORNITURE';
-      case name.includes('EUROVO'): return 'EUROVO';
-      case name.includes('PENTA CARTA'): return 'PENTACARTA';
-      case name.includes('PREGEL'): return 'PREGEL';
-      default:
-        switch (piva) {
-          case '01054061005': return 'CEDIAL';
-          case '04407491002': return 'NOVASERVICE';
-          case '05194771001': return 'DOLCIFORNITURE';
-          case '00727070393': return 'EUROVO';
-          case '05913941000': return 'PENTACARTA';
-          case '01851810362': return 'PREGEL';
-          default: return '';
-        }
+    switch (piva) {
+      case '01054061005': return 'CEDIAL';
+      case '04407491002': return 'NOVASERVICE';
+      case '05194771001': return 'DOLCIFORNITURE';
+      case '00727070393': return 'EUROVO';
+      case '05913941000': return 'PENTACARTA';
+      case '01851810362': return 'PREGEL';
+      default: return '';
     }
   };
 
-  const isValidProduct = (linea) => {
-    const descrizione = linea.querySelector("Descrizione")?.textContent || '';
-    const excludeTexts = [
-      "Ordine Cl. num.",
-      "Preord. Cl. num.",
-      "Contributo",
-      "CONTRIBUTO",
-      "Aggiunta",
-      "conai",
-      "CONAI"
-    ];
-    return !excludeTexts.some(text => descrizione.toLowerCase().includes(text.toLowerCase()));
-  };
   const parseXML = (xmlString) => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "application/xml");
@@ -195,83 +174,20 @@ const InvoiceManager = () => {
     return { date: invoiceDate, supplier, products };
   };
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    try {
-      console.log(`Processing ${files.length} files...`);
-      for (const file of files) {
-        const text = await file.text();
-        const { date, supplier, products: fileProducts } = parseXML(text);
-        
-        console.log(`Saving invoice: ${date} - ${supplier} (${fileProducts.length} products)`);
-        
-        await api.createInvoice({
-          date,
-          supplier,
-          fileName: file.name,
-          file: text,
-          products: fileProducts
-        });
-
-        updateProducts(fileProducts);
-      }
-      
-      await loadData();
-      toast.success('Fatture caricate con successo');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Errore nel caricamento dei file: ' + error.message);
-    }
+  const isValidProduct = (linea) => {
+    const descrizione = linea.querySelector("Descrizione")?.textContent || '';
+    const excludeTexts = [
+      "Ordine Cl. num.",
+      "Preord. Cl. num.",
+      "Contributo",
+      "CONTRIBUTO",
+      "Aggiunta",
+      "conai",
+      "CONAI"
+    ];
+    return !excludeTexts.some(text => descrizione.toLowerCase().includes(text.toLowerCase()));
   };
 
-  const updateProducts = (newProducts) => {
-    const updatedProducts = [...products];
-    
-    newProducts.forEach(newProduct => {
-      const existingProductIndex = updatedProducts.findIndex(p => p.id === newProduct.id);
-      
-      if (existingProductIndex !== -1) {
-        const existingProduct = updatedProducts[existingProductIndex];
-        if (!existingProduct.priceHistory) {
-          existingProduct.priceHistory = [];
-        }
-        
-        const priceExists = existingProduct.priceHistory.some(
-          ph => ph.date === newProduct.date
-        );
-        
-        if (!priceExists) {
-          existingProduct.priceHistory.push({
-            date: newProduct.date,
-            price: newProduct.price,
-            quantity: newProduct.quantity,
-            discounts: newProduct.discounts
-          });
-          
-          existingProduct.priceHistory.sort((a, b) => 
-            new Date(b.date) - new Date(a.date)
-          );
-
-          if (!existingProduct.iva && newProduct.iva) {
-            existingProduct.iva = newProduct.iva;
-          }
-        }
-      } else {
-        updatedProducts.push({
-          ...newProduct,
-          priceHistory: [{
-            date: newProduct.date,
-            price: newProduct.price,
-            quantity: newProduct.quantity,
-            discounts: newProduct.discounts
-          }]
-        });
-      }
-    });
-    
-    setProducts(updatedProducts);
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-  };
   const getSupplierInvoiceDates = (supplierProducts) => {
     const allDates = new Set();
     supplierProducts.forEach(product => {
@@ -286,7 +202,6 @@ const InvoiceManager = () => {
     const priceRecord = product.priceHistory?.find(history => history.date === date);
     return priceRecord || null;
   };
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSupplier = !selectedSupplier || product.supplier === selectedSupplier;
@@ -296,19 +211,12 @@ const InvoiceManager = () => {
   const currentSupplierProducts = selectedSupplier 
     ? filteredProducts.filter(p => p.supplier === selectedSupplier)
     : [];
-    
+  
   const supplierDates = selectedSupplier 
     ? getSupplierInvoiceDates(currentSupplierProducts)
     : [];
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('it-IT', { 
-      style: 'currency', 
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    }).format(price);
-  };
+  // Render del componente
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-6">
@@ -369,88 +277,61 @@ const InvoiceManager = () => {
           </div>
         </div>
         {selectedSupplier ? (
-          <div>
-            <div className="flex justify-end gap-2 mb-2">
-              <button
-                onClick={() => handleScroll('left')}
-                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B4513] md:hidden"
-                aria-label="Scroll left"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                onClick={() => handleScroll('right')}
-                className="p-2 bg-white rounded-lg shadow text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B4513] md:hidden"
-                aria-label="Scroll right"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div 
-                ref={tableRef}
-                className="overflow-x-auto w-full touch-pan-x"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-              >
-                <div className="min-w-full inline-block align-middle">
-                  <table className="min-w-full">
-                    <thead className="bg-[#8B4513] text-white">
-                      <tr>
-                        <th className="sticky left-0 z-20 bg-[#8B4513] p-4 text-left font-medium whitespace-nowrap min-w-[200px]">
-                          Prodotto
-                        </th>
-                        <th className="sticky left-[200px] z-20 bg-[#8B4513] p-4 text-center font-medium whitespace-nowrap min-w-[100px]">
-                          IVA %
-                        </th>
-                        {supplierDates.map((date) => (
-                          <th key={date} className="p-4 text-center font-medium whitespace-nowrap min-w-[150px]">
-                            {new Date(date).toLocaleDateString('it-IT')}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {currentSupplierProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-amber-50">
-                          <td className="sticky left-0 bg-white border-r p-4 text-sm whitespace-nowrap">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">{product.name}</span>
-                              <button
-                                onClick={() => deleteProduct(product)}
-                                className="ml-2 text-red-600 hover:bg-red-50 p-1 rounded"
-                                aria-label="Delete product"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="sticky left-[200px] bg-white border-r p-4 text-center text-sm">
-                            {product.iva}%
-                          </td>
-                          {supplierDates.map((date) => {
-                            const priceRecord = getProductPriceForDate(product, date);
-                            return (
-                              <td key={date} className="p-4 text-center text-sm border-r">
-                                {priceRecord && (
-                                  <div className="space-y-1">
-                                    <div>Q: {priceRecord.quantity}</div>
-                                    <div>P: {formatPrice(priceRecord.price)}</div>
-                                    {priceRecord.discounts && priceRecord.discounts.length > 0 && (
-                                      <div>S: {priceRecord.discounts.join(', ')}%</div>
-                                    )}
-                                  </div>
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="overflow-x-auto" ref={tableRef}>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-[#8B4513] text-white">
+                  <tr>
+                    <th className="sticky left-0 z-20 bg-[#8B4513] px-4 py-3 text-left font-medium">
+                      Prodotto
+                    </th>
+                    <th className="sticky left-[200px] z-20 bg-[#8B4513] px-4 py-3 text-center font-medium">
+                      IVA %
+                    </th>
+                    {supplierDates.map((date) => (
+                      <th key={date} className="px-4 py-3 text-center font-medium whitespace-nowrap min-w-[200px]">
+                        {new Date(date).toLocaleDateString('it-IT')}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {currentSupplierProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-amber-50">
+                      <td className="sticky left-0 bg-white px-4 py-3 border-r">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{product.name}</span>
+                          <button
+                            onClick={() => deleteProduct(product)}
+                            className="ml-2 text-red-600 hover:bg-red-50 p-1 rounded"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="sticky left-[200px] bg-white px-4 py-3 text-center border-r">
+                        {product.iva}%
+                      </td>
+                      {supplierDates.map((date) => {
+                        const priceRecord = getProductPriceForDate(product, date);
+                        return (
+                          <td key={date} className="px-4 py-3 text-center border-r whitespace-nowrap">
+                            {priceRecord && (
+                              <div className="space-y-1">
+                                <div>Q: {priceRecord.quantity}</div>
+                                <div>P: €{priceRecord.price.toFixed(2)}</div>
+                                {priceRecord.discounts && priceRecord.discounts.length > 0 && (
+                                  <div>S: {priceRecord.discounts.join(', ')}%</div>
                                 )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : (
