@@ -287,7 +287,7 @@ const InvoiceManager = () => {
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch'
             }}
-          >git
+          >
               <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#8B4513] text-white sticky top-0 z-30">
              <tr>
