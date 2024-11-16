@@ -279,11 +279,12 @@ const InvoiceManager = () => {
         {selectedSupplier ? (
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div 
-            className="overflow-x-auto w-full" 
+            className="overflow-x-auto w-full max-h-[70vh]" 
             ref={tableRef}
             style={{ 
               maxWidth: '100%',
               overflowX: 'auto',
+              overflowY: 'auto',
               WebkitOverflowScrolling: 'touch'
             }}
           >

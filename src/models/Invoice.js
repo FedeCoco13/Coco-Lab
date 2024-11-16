@@ -27,13 +27,7 @@ const ProductSchema = new mongoose.Schema({
     required: true
   },
   discounts: [Number],
-  date: String,
-  priceHistory: [{
-    date: String,
-    price: Number,
-    quantity: Number,
-    discounts: [Number]
-  }]
+  date: String
 });
 
 const InvoiceSchema = new mongoose.Schema({
@@ -45,29 +39,13 @@ const InvoiceSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  fileName: {
-    type: String,
-    required: true
-  },
-  file: {
-    type: String,
-    required: true
-  },
+  fileName: String,
+  file: String,
   products: [ProductSchema],
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
-});
-
-// Update the updatedAt field on save
-InvoiceSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
 });
 
 export default mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);
