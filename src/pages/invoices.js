@@ -288,16 +288,16 @@ const InvoiceManager = () => {
             }}
           >
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-[#8B4513] text-white">
-                  <tr>
-                    <th className="sticky left-0 z-20 bg-[#8B4513] px-4 py-3 text-left font-medium">
-                      Prodotto
+              <thead className="bg-[#8B4513] text-white sticky top-0 z-30">
+             <tr>
+             <th className="sticky top-0 left-0 z-40 bg-[#8B4513] px-4 py-3 text-left font-medium">
+                  Prodotto
+                     </th>
+                    <th className="sticky top-0 left-[200px] z-40 bg-[#8B4513] px-4 py-3 text-center font-medium">
+                  IVA %
                     </th>
-                    <th className="sticky left-[200px] z-20 bg-[#8B4513] px-4 py-3 text-center font-medium">
-                      IVA %
-                    </th>
-                    {supplierDates.map((date) => (
-                      <th key={date} className="px-4 py-3 text-center font-medium whitespace-nowrap min-w-[200px]">
+                     {supplierDates.map((date) => (
+                      <th key={date} className="sticky top-0 z-30 bg-[#8B4513] px-4 py-3 text-center font-medium whitespace-nowrap min-w-[200px]">
                         {new Date(date).toLocaleDateString('it-IT')}
                       </th>
                     ))}
