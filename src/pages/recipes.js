@@ -1,3 +1,5 @@
+// src/pages/recipes.js
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash, Printer, ArrowLeft, X, Save, Calculator, Eye, Minus, DollarSign } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -28,31 +30,41 @@ const RecipeManager = () => {
 
   // Caricamento dati iniziali
   useEffect(() => {
-    loadRecipes();
-    const storedProducts = localStorage.getItem('products');
-    const storedMappings = localStorage.getItem('ingredientMappings');
-    
-    if (storedProducts) {
-      const productsData = JSON.parse(storedProducts);
-      const productsWithIds = productsData.map(product => ({
-        ...product,
-        id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
-      }));
-      setProducts(productsWithIds);
-    }
-    if (storedMappings) setIngredientMappings(JSON.parse(storedMappings));
+    loadInitialData();
   }, []);
 
-  const loadRecipes = async () => {
+  const loadInitialData = async () => {
     try {
-      const data = await api.getRecipes();
-      setRecipes(data);
+      const [recipesData, mappingsData] = await Promise.all([
+        api.getRecipes(),
+        api.getMappings()
+      ]);
+
+      setRecipes(recipesData);
+
+      // Converti i mappings in un oggetto per facile accesso
+      const mappingsObject = mappingsData.reduce((acc, mapping) => {
+        acc[mapping.ingredientName] = mapping.productId;
+        return acc;
+      }, {});
+      setIngredientMappings(mappingsObject);
+
+      // Carica i prodotti dal localStorage (temporaneo)
+      const storedProducts = localStorage.getItem('products');
+      if (storedProducts) {
+        const productsData = JSON.parse(storedProducts);
+        const productsWithIds = productsData.map(product => ({
+          ...product,
+          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
+        }));
+        setProducts(productsWithIds);
+      }
     } catch (error) {
-      console.error('Errore nel caricamento delle ricette:', error);
-      toast.error('Errore nel caricamento delle ricette');
+      console.error('Errore nel caricamento dei dati:', error);
+      toast.error('Errore nel caricamento dei dati');
     }
   };
-  // Funzione di formattazione peso
+  // Funzioni di calcolo
   const formatWeight = (grams) => {
     if (grams >= 1000) {
       return `${(grams / 1000).toFixed(2)} kg`;
@@ -60,7 +72,6 @@ const RecipeManager = () => {
     return `${grams.toFixed(0)} gr`;
   };
 
-  // Funzioni di calcolo
   const calculateRecipeTotal = (ingredients) => {
     const totalInGrams = ingredients
       .filter(ing => !ing.isDivider)
@@ -134,6 +145,51 @@ const RecipeManager = () => {
       total: totalCost
     };
   };
+
+  const handleFoodCostOpen = async (recipe) => {
+    setCurrentRecipe(recipe);
+    try {
+      // Carica le associazioni specifiche per questa ricetta
+      const mappings = await api.getMappings(recipe._id);
+      const mappingsObject = mappings.reduce((acc, mapping) => {
+        acc[mapping.ingredientName] = mapping.productId;
+        return acc;
+      }, {});
+      setCurrentMappings(mappingsObject);
+      setShowFoodCostModal(true);
+    } catch (error) {
+      console.error('Errore nel caricamento delle associazioni:', error);
+      toast.error('Errore nel caricamento delle associazioni');
+    }
+  };
+
+  const getAvailableProducts = () => {
+    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
+    return products
+      .filter(p => validSuppliers.includes(p.supplier))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const saveMappings = async () => {
+    try {
+      const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
+        if (value) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+
+      await api.saveMappings(validMappings, currentRecipe._id);
+      setIngredientMappings(prevMappings => ({
+        ...prevMappings,
+        ...validMappings
+      }));
+      toast.success('Associazioni salvate con successo');
+    } catch (error) {
+      console.error('Errore nel salvare le associazioni:', error);
+      toast.error('Errore nel salvare le associazioni');
+    }
+  };
   // Funzioni di gestione ricette
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -145,7 +201,7 @@ const RecipeManager = () => {
         await api.createRecipe(currentRecipe);
         toast.success('Ricetta creata con successo');
       }
-      await loadRecipes();
+      await loadInitialData();
       setShowNewRecipeForm(false);
       setCurrentRecipe({
         name: '',
@@ -160,34 +216,35 @@ const RecipeManager = () => {
   };
 
   const addIngredient = (isDivider = false) => {
-    setCurrentRecipe({
-      ...currentRecipe,
-      ingredients: [...currentRecipe.ingredients, { 
+    setCurrentRecipe(prev => ({
+      ...prev,
+      ingredients: [...prev.ingredients, { 
         name: isDivider ? '---' : '', 
         quantity: '', 
         unit: 'gr',
         isDivider 
       }]
-    });
+    }));
   };
 
   const removeIngredient = (index) => {
-    const newIngredients = currentRecipe.ingredients.filter((_, i) => i !== index);
-    setCurrentRecipe({
-      ...currentRecipe,
-      ingredients: newIngredients
-    });
+    setCurrentRecipe(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index)
+    }));
   };
 
   const updateIngredient = (index, field, value) => {
-    const newIngredients = [...currentRecipe.ingredients];
-    newIngredients[index] = {
-      ...newIngredients[index],
-      [field]: value
-    };
-    setCurrentRecipe({
-      ...currentRecipe,
-      ingredients: newIngredients
+    setCurrentRecipe(prev => {
+      const newIngredients = [...prev.ingredients];
+      newIngredients[index] = {
+        ...newIngredients[index],
+        [field]: value
+      };
+      return {
+        ...prev,
+        ingredients: newIngredients
+      };
     });
   };
 
@@ -201,49 +258,14 @@ const RecipeManager = () => {
     if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
       try {
         await api.deleteRecipe(id);
-        await loadRecipes();
+        await api.deleteMappingsByRecipe(id);
+        await loadInitialData();
         toast.success('Ricetta eliminata con successo');
       } catch (error) {
         console.error('Errore nell\'eliminazione della ricetta:', error);
         toast.error('Errore nell\'eliminazione della ricetta');
       }
     }
-  };
-
-  const handleFoodCostOpen = (recipe) => {
-    setCurrentRecipe(recipe);
-    const existingMappings = {};
-    recipe.ingredients.forEach(ing => {
-      if (!ing.isDivider) {
-        const existingMapping = ingredientMappings[ing.name];
-        if (existingMapping) {
-          existingMappings[ing.name] = existingMapping;
-        }
-      }
-    });
-    setCurrentMappings(existingMappings);
-    setShowFoodCostModal(true);
-  };
-
-  const getAvailableProducts = () => {
-    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
-    return products
-      .filter(p => validSuppliers.includes(p.supplier))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  };
-
-  const saveMappings = () => {
-    const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
-      if (value) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
-
-    const updatedMappings = { ...ingredientMappings, ...validMappings };
-    setIngredientMappings(updatedMappings);
-    localStorage.setItem('ingredientMappings', JSON.stringify(updatedMappings));
-    setCurrentMappings(validMappings);
   };
 
   const recalculateQuantities = () => {
@@ -316,7 +338,6 @@ const RecipeManager = () => {
           </head>
           <body>
             <div class="title">${recipe.name}</div>
-            
             <div class="ingredients">
               ${ingredients.map(ing => 
                 ing.isDivider ? 
@@ -328,7 +349,6 @@ const RecipeManager = () => {
               ).join('')}
               <div class="total">Peso totale: ${formatWeight(totalWeight)}</div>
             </div>
-            
             <div class="procedure">
               ${recipe.procedure}
             </div>
@@ -340,7 +360,6 @@ const RecipeManager = () => {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.print();
-
     } else if (mode === 'foodcost') {
       const foodCost = calculateFoodCost(recipe, currentMappings);
       const printContent = `
@@ -417,61 +436,62 @@ const RecipeManager = () => {
       printWindow.print();
     }
   };
+  // Prima parte del return con i modali
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         {showFoodCostModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-[#8B4513]">
-                  Food Cost: {currentRecipe.name}
-                </h2>
-                <button
-                  onClick={() => setShowFoodCostModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white p-4 border-b">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl md:text-2xl font-bold text-[#8B4513]">
+                    Food Cost: {currentRecipe.name}
+                  </h2>
+                  <button
+                    onClick={() => setShowFoodCostModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-4">Associa Ingredienti ai Prodotti</h3>
-                {currentRecipe.ingredients.map((ing, index) => !ing.isDivider && (
-                  <div key={index} className="flex gap-4 items-center mb-2">
-                    <div className="w-1/3">
-                      <span>{ing.name}</span>
+              <div className="p-4 space-y-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-4">Associa Ingredienti ai Prodotti</h3>
+                  {currentRecipe.ingredients.map((ing, index) => !ing.isDivider && (
+                    <div key={index} className="flex flex-col md:flex-row gap-2 md:gap-4 mb-4">
+                      <div className="w-full md:w-1/3">
+                        <span className="block md:inline">{ing.name}</span>
+                      </div>
+                      <div className="w-full md:w-2/3">
+                        <select
+                          value={currentMappings[ing.name] || ''}
+                          onChange={(e) => {
+                            setCurrentMappings(prev => ({
+                              ...prev,
+                              [ing.name]: e.target.value
+                            }));
+                          }}
+                          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+                        >
+                          <option value="">Seleziona prodotto</option>
+                          {getAvailableProducts().map(product => (
+                            <option key={product.id} value={product.id}>
+                              {product.name} ({product.supplier})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div className="w-2/3">
-                      <select
-                        value={currentMappings[ing.name] || ''}
-                        onChange={(e) => {
-                          const newMappings = {
-                            ...currentMappings,
-                            [ing.name]: e.target.value
-                          };
-                          setCurrentMappings(newMappings);
-                        }}
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-                      >
-                        <option value="">Seleziona prodotto</option>
-                        {getAvailableProducts().map(product => (
-                          <option key={product.id} value={product.id}>
-                            {product.name} ({product.supplier})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-4">Riepilogo Costi</h3>
-                {(() => {
-                  const foodCost = calculateFoodCost(currentRecipe, currentMappings);
-                  return (
-                    <table className="w-full">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Riepilogo Costi</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px]">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-2 text-left">Ingrediente</th>
@@ -483,7 +503,7 @@ const RecipeManager = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {foodCost.ingredients.map((ing, index) => (
+                        {calculateFoodCost(currentRecipe, currentMappings).ingredients.map((ing, index) => (
                           <tr key={index} className={!ing.mapped ? 'bg-yellow-50' : ''}>
                             <td className="px-4 py-2">{ing.name}</td>
                             <td className="px-4 py-2">{ing.productName}</td>
@@ -495,148 +515,48 @@ const RecipeManager = () => {
                         ))}
                         <tr className="font-bold bg-gray-50">
                           <td colSpan="4" className="px-4 py-2">Costo Totale</td>
-                          <td className="px-4 py-2 text-right">€{foodCost.total.toFixed(2)}</td>
+                          <td className="px-4 py-2 text-right">
+                            €{calculateFoodCost(currentRecipe, currentMappings).total.toFixed(2)}
+                          </td>
                           <td className="px-4 py-2 text-right">100%</td>
                         </tr>
                       </tbody>
                     </table>
-                  );
-                })()}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => printRecipe(currentRecipe, 'foodcost')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Printer className="h-5 w-5" />
-                  Stampa
-                </button>
-                <button
-                  onClick={saveMappings}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  <Save className="h-5 w-5" />
-                  Salva Associazioni
-                </button>
-                <button
-                  onClick={() => setShowFoodCostModal(false)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                >
-                  Chiudi
-                </button>
+              <div className="sticky bottom-0 bg-white p-4 border-t">
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => printRecipe(currentRecipe, 'foodcost')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Printer className="h-5 w-5" />
+                    <span className="hidden md:inline">Stampa</span>
+                  </button>
+                  <button
+                    onClick={saveMappings}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    <Save className="h-5 w-5" />
+                    <span className="hidden md:inline">Salva Associazioni</span>
+                  </button>
+                  <button
+                    onClick={() => setShowFoodCostModal(false)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                  >
+                    Chiudi
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
-        {showRecalculateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-              <h2 className="text-xl font-bold text-[#8B4513] mb-4">Ricalcola Quantità</h2>
-              <p className="mb-4 text-gray-600">
-                Inserisci il fattore di moltiplicazione. Ad esempio:
-                <br/>• 2 per raddoppiare le quantità
-                <br/>• 0.5 per dimezzarle
-              </p>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                value={recalculateFactor}
-                onChange={(e) => setRecalculateFactor(e.target.value)}
-                className="w-full p-2 border rounded-lg mb-4"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setShowRecalculateModal(false);
-                    setRecalculateFactor(1);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={recalculateQuantities}
-                  className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D]"
-                >
-                  Ricalcola
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showViewModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-[#8B4513]">
-                  {recalculatedRecipe ? recalculatedRecipe.name : currentRecipe.name}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowViewModal(false);
-                    setRecalculatedRecipe(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="font-medium text-[#A0522D] mb-2">Ingredienti:</h3>
-                {(() => {
-                  const recipe = recalculatedRecipe || currentRecipe;
-                  const { totalWeight, ingredients } = calculateRecipeTotal(recipe.ingredients);
-                  
-                  return (
-                    <>
-                      <div className="space-y-1">
-                        {ingredients.map((ing, index) => (
-                          ing.isDivider ? (
-                            <div key={index} className="border-t border-gray-300 my-2"></div>
-                          ) : (
-                            <div key={index} className="flex justify-between">
-                              <span>{ing.name}</span>
-                              <span>{ing.quantity} {ing.unit} ({ing.percentage}%)</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                      <div className="mt-4 text-right font-medium text-gray-700">
-                        Peso totale: {formatWeight(totalWeight)}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div className="mb-6">
-                <h3 className="font-medium text-[#A0522D] mb-2">Procedimento:</h3>
-                <p className="text-gray-600 whitespace-pre-wrap">
-                  {(recalculatedRecipe || currentRecipe).procedure}
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  onClick={() => printRecipe(recalculatedRecipe || currentRecipe)}
-                  className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] flex items-center gap-2"
-                >
-                  <Printer className="h-5 w-5" />
-                  Stampa
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {showNewRecipeForm ? (
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-[#8B4513]">
+              <h1 className="text-xl md:text-2xl font-bold text-[#8B4513]">
                 {isEditing ? 'Modifica Ricetta' : 'Nuova Ricetta'}
               </h1>
               <button
@@ -654,6 +574,7 @@ const RecipeManager = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -688,7 +609,7 @@ const RecipeManager = () => {
                       className="text-[#8B4513] hover:text-[#A0522D] flex items-center gap-1"
                     >
                       <Plus className="h-4 w-4" />
-                      Aggiungi Ingrediente
+                      <span className="hidden md:inline">Aggiungi Ingrediente</span>
                     </button>
                   </div>
                 </div>
@@ -707,7 +628,7 @@ const RecipeManager = () => {
                         </button>
                       </div>
                     ) : (
-                      <div key={index} className="flex gap-2 items-start">
+                      <div key={index} className="flex flex-col md:flex-row gap-2">
                         <div className="flex-1">
                           <input
                             type="text"
@@ -726,7 +647,7 @@ const RecipeManager = () => {
                             ))}
                           </datalist>
                         </div>
-                        <div className="w-24">
+                        <div className="w-full md:w-24">
                           <input
                             type="number"
                             step="0.001"
@@ -737,7 +658,7 @@ const RecipeManager = () => {
                             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                           />
                         </div>
-                        <div className="w-24">
+                        <div className="w-full md:w-24">
                           <select
                             value={ingredient.unit}
                             onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
@@ -776,21 +697,6 @@ const RecipeManager = () => {
 
               <div className="flex justify-end gap-2">
                 <button
-                  type="button"
-                  onClick={() => {
-                    setShowNewRecipeForm(false);
-                    setCurrentRecipe({
-                      name: '',
-                      ingredients: [{ name: '', quantity: '', unit: 'gr', isDivider: false }],
-                      procedure: ''
-                    });
-                    setIsEditing(false);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Annulla
-                </button>
-                <button
                   type="submit"
                   className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] flex items-center gap-2"
                 >
@@ -802,20 +708,20 @@ const RecipeManager = () => {
           </div>
         ) : (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
               <Link
                 href="/"
                 className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D]"
               >
                 <ArrowLeft className="h-5 w-5" />
-                Torna alla Home
+                <span>Torna alla Home</span>
               </Link>
               <button
                 onClick={() => setShowNewRecipeForm(true)}
-                className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] flex items-center gap-2"
+                className="w-full md:w-auto px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] flex items-center justify-center gap-2"
               >
                 <Plus className="h-5 w-5" />
-                Nuova Ricetta
+                <span>Nuova Ricetta</span>
               </button>
             </div>
 
