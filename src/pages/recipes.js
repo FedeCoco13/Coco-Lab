@@ -32,31 +32,42 @@ const RecipeManager = () => {
   useEffect(() => {
     loadInitialData();
   }, []);
-
+  
   const loadInitialData = async () => {
     try {
-      const data = await api.getRecipes();
-      setRecipes(data);
-
-      // Carica i prodotti dal localStorage (temporaneo)
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const productsData = JSON.parse(storedProducts);
-        const productsWithIds = productsData.map(product => ({
-          ...product,
-          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
-        }));
-        setProducts(productsWithIds);
-      }
-
-      // Estrai tutte le associazioni dalle ricette
-      const allMappings = {};
-      data.forEach(recipe => {
-        if (recipe.ingredientMappings) {
-          Object.assign(allMappings, recipe.ingredientMappings);
-        }
+      const [recipesData, invoicesData] = await Promise.all([
+        api.getRecipes(),
+        api.getInvoices()
+      ]);
+  
+      setRecipes(recipesData);
+  
+      // Estrai i prodotti dalle fatture
+      const allProducts = {};
+      invoicesData.forEach(invoice => {
+        invoice.products?.forEach(product => {
+          if (!allProducts[product.id]) {
+            allProducts[product.id] = {
+              ...product,
+              priceHistory: []
+            };
+          }
+          allProducts[product.id].priceHistory.push({
+            date: invoice.date,
+            price: product.price,
+            quantity: product.quantity,
+            discounts: product.discounts
+          });
+        });
       });
-      setIngredientMappings(allMappings);
+  
+      // Ordina la cronologia prezzi per data
+      Object.values(allProducts).forEach(product => {
+        product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+      });
+  
+      setProducts(Object.values(allProducts));
+  
     } catch (error) {
       console.error('Errore nel caricamento dei dati:', error);
       toast.error('Errore nel caricamento dei dati');
@@ -139,7 +150,14 @@ const RecipeManager = () => {
     const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
     return products
       .filter(p => validSuppliers.includes(p.supplier))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        // Prima ordina per fornitore
+        if (a.supplier !== b.supplier) {
+          return a.supplier.localeCompare(b.supplier);
+        }
+        // Poi per nome prodotto
+        return a.name.localeCompare(b.name);
+      });
   };
 
   const handleFoodCostOpen = async (recipe) => {
