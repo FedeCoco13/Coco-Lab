@@ -105,19 +105,30 @@ const RecipeManager = () => {
 
   const handleFoodCostOpen = async (recipe) => {
     try {
+      console.log('Starting handleFoodCostOpen with recipe:', recipe);
       setCurrentRecipe(recipe);
-      console.log('Loading mappings for recipe:', recipe._id);
       
+      // Verifichiamo che l'ID della ricetta sia presente
+      if (!recipe._id) {
+        console.error('Recipe ID is missing:', recipe);
+        toast.error('ID ricetta mancante');
+        return;
+      }
+      
+      console.log('Fetching mappings for recipe:', recipe._id);
       const mappings = await api.getRecipeMappings(recipe._id);
-      console.log('Loaded mappings:', mappings);
+      console.log('Received mappings:', mappings);
       
       // Assicuriamoci che mappings sia un oggetto valido
       const validMappings = mappings && typeof mappings === 'object' ? mappings : {};
+      console.log('Setting current mappings:', validMappings);
       setCurrentMappings(validMappings);
+      
+      console.log('Opening modal');
       setShowFoodCostModal(true);
     } catch (error) {
-      console.error('Errore nel caricamento delle associazioni:', error);
-      toast.error('Errore nel caricamento delle associazioni');
+      console.error('Error in handleFoodCostOpen:', error);
+      toast.error(`Errore: ${error.message}`);
     }
   };
   const saveMappings = async () => {

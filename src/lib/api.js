@@ -36,22 +36,48 @@ export const api = {
     return res.json();
   },
 
-  // New Ingredient Mappings APIs
-  async getRecipeMappings(recipeId) {
-    const res = await fetch(`${BASE_URL}/recipes/${recipeId}/mappings`);
-    if (!res.ok) throw new Error('Failed to fetch ingredient mappings');
-    return res.json();
-  },
+    // Recipe Mappings APIs
+async getRecipeMappings(recipeId) {
+  console.log('Calling getRecipeMappings for recipe:', recipeId);
+  try {
+    const res = await fetch(`/api/recipes/${recipeId}/mappings`);
+    console.log('API Response status:', res.status);
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('API Error:', errorData);
+      throw new Error(errorData.error || 'Failed to fetch mappings');
+    }
+    const data = await res.json();
+    console.log('API Response data:', data);
+    return data;
+  } catch (error) {
+    console.error('API Call Error:', error);
+    throw error;
+  }
+},
 
-  async saveRecipeMappings(recipeId, mappings) {
-    const res = await fetch(`${BASE_URL}/recipes/${recipeId}/mappings`, {
+async saveRecipeMappings(recipeId, mappings) {
+  console.log('Calling saveRecipeMappings:', { recipeId, mappings });
+  try {
+    const res = await fetch(`/api/recipes/${recipeId}/mappings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mappings })
     });
-    if (!res.ok) throw new Error('Failed to save ingredient mappings');
-    return res.json();
-  },
+    console.log('API Response status:', res.status);
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('API Error:', errorData);
+      throw new Error(errorData.error || 'Failed to save mappings');
+    }
+    const data = await res.json();
+    console.log('API Response data:', data);
+    return data;
+  } catch (error) {
+    console.error('API Call Error:', error);
+    throw error;
+  }
+},
 
   // Orders APIs (manteniamo quelle esistenti)
   async getOrders() {

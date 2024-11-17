@@ -7,20 +7,28 @@ export default async function handler(req, res) {
     method,
   } = req;
 
+  console.log('API called with method:', method, 'for recipe:', id);
+
   try {
+    console.log('Connecting to database...');
     await connectToDatabase();
+    console.log('Connected to database');
 
     switch (method) {
       case 'GET':
         try {
+          console.log('Finding recipe...');
           const recipe = await Recipe.findById(id).lean();
+          console.log('Recipe found:', recipe);
+          
           if (!recipe) {
+            console.log('Recipe not found');
             return res.status(404).json({ error: 'Ricetta non trovata' });
           }
           
           // Assicuriamoci di ritornare sempre un oggetto valido
           const mappings = recipe.ingredientMappings || {};
-          console.log('GET Mappings:', mappings); // Log per debug
+          console.log('Returning mappings:', mappings);
           res.status(200).json(mappings);
         } catch (error) {
           console.error('GET Error:', error);
@@ -32,10 +40,11 @@ export default async function handler(req, res) {
         try {
           // Validazione input
           if (!req.body.mappings || typeof req.body.mappings !== 'object') {
+            console.error('Invalid mappings data received:', req.body);
             return res.status(400).json({ error: 'Invalid mappings data' });
           }
 
-          console.log('Received mappings:', req.body.mappings); // Log per debug
+          console.log('Received mappings:', req.body.mappings);
 
           // Aggiornamento usando il nuovo formato
           const updatedRecipe = await Recipe.findByIdAndUpdate(
@@ -45,11 +54,12 @@ export default async function handler(req, res) {
           ).lean();
 
           if (!updatedRecipe) {
+            console.log('Recipe not found for update');
             return res.status(404).json({ error: 'Ricetta non trovata' });
           }
 
           const savedMappings = updatedRecipe.ingredientMappings || {};
-          console.log('Saved mappings:', savedMappings); // Log per debug
+          console.log('Saved mappings:', savedMappings);
           
           res.status(200).json(savedMappings);
         } catch (error) {
