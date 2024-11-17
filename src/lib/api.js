@@ -1,15 +1,15 @@
-const BASE_URL = '/api';
+const BASE_URL = '';
 
 export const api = {
   // Recipe APIs
   async getRecipes() {
-    const res = await fetch(`${BASE_URL}/recipes`);
+    const res = await fetch(`${BASE_URL}/api/recipes`);
     if (!res.ok) throw new Error('Failed to fetch recipes');
     return res.json();
   },
 
   async createRecipe(recipe) {
-    const res = await fetch(`${BASE_URL}/recipes`, {
+    const res = await fetch(`${BASE_URL}/api/recipes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(recipe)
@@ -19,7 +19,7 @@ export const api = {
   },
 
   async updateRecipe(id, recipe) {
-    const res = await fetch(`${BASE_URL}/recipes/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/recipes/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(recipe)
@@ -29,65 +29,61 @@ export const api = {
   },
 
   async deleteRecipe(id) {
-    const res = await fetch(`${BASE_URL}/recipes/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/recipes/${id}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete recipe');
     return res.json();
   },
 
-    // Recipe Mappings APIs
-async getRecipeMappings(recipeId) {
-  console.log('Calling getRecipeMappings for recipe:', recipeId);
-  try {
-    const res = await fetch(`/api/recipes/${recipeId}/mappings`);
-    console.log('API Response status:', res.status);
-    if (!res.ok) {
-      const errorData = await res.json();
-      console.error('API Error:', errorData);
-      throw new Error(errorData.error || 'Failed to fetch mappings');
+  // Recipe Mappings APIs
+  async getRecipeMappings(recipeId) {
+    console.log('Fetching mappings for recipe:', recipeId);
+    try {
+      const res = await fetch(`${BASE_URL}/api/recipes/${recipeId}/mappings`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to fetch mappings');
+      }
+      const data = await res.json();
+      console.log('Received mappings:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching mappings:', error);
+      throw error;
     }
-    const data = await res.json();
-    console.log('API Response data:', data);
-    return data;
-  } catch (error) {
-    console.error('API Call Error:', error);
-    throw error;
-  }
-},
+  },
 
-async saveRecipeMappings(recipeId, mappings) {
-  console.log('Calling saveRecipeMappings:', { recipeId, mappings });
-  try {
-    const res = await fetch(`/api/recipes/${recipeId}/mappings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mappings })
-    });
-    console.log('API Response status:', res.status);
-    if (!res.ok) {
-      const errorData = await res.json();
-      console.error('API Error:', errorData);
-      throw new Error(errorData.error || 'Failed to save mappings');
+  async saveRecipeMappings(recipeId, mappings) {
+    console.log('Saving mappings:', { recipeId, mappings });
+    try {
+      const res = await fetch(`${BASE_URL}/api/recipes/${recipeId}/mappings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mappings })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to save mappings');
+      }
+      const data = await res.json();
+      console.log('Saved mappings:', data);
+      return data;
+    } catch (error) {
+      console.error('Error saving mappings:', error);
+      throw error;
     }
-    const data = await res.json();
-    console.log('API Response data:', data);
-    return data;
-  } catch (error) {
-    console.error('API Call Error:', error);
-    throw error;
-  }
-},
+  },
 
-  // Orders APIs (manteniamo quelle esistenti)
+  // Orders APIs
   async getOrders() {
-    const res = await fetch(`${BASE_URL}/orders`);
+    const res = await fetch(`${BASE_URL}/api/orders`);
     if (!res.ok) throw new Error('Failed to fetch orders');
     return res.json();
   },
 
   async createOrder(order) {
-    const res = await fetch(`${BASE_URL}/orders`, {
+    const res = await fetch(`${BASE_URL}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
@@ -97,7 +93,7 @@ async saveRecipeMappings(recipeId, mappings) {
   },
 
   async updateOrder(id, order) {
-    const res = await fetch(`${BASE_URL}/orders/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
@@ -107,22 +103,22 @@ async saveRecipeMappings(recipeId, mappings) {
   },
 
   async deleteOrder(id) {
-    const res = await fetch(`${BASE_URL}/orders/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/orders/${id}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete order');
     return res.json();
   },
 
-  // Invoices APIs (manteniamo quelle esistenti)
+  // Invoices APIs
   async getInvoices() {
-    const res = await fetch(`${BASE_URL}/invoices`);
+    const res = await fetch(`${BASE_URL}/api/invoices`);
     if (!res.ok) throw new Error('Failed to fetch invoices');
     return res.json();
   },
 
   async createInvoice(invoice) {
-    const res = await fetch(`${BASE_URL}/invoices`, {
+    const res = await fetch(`${BASE_URL}/api/invoices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(invoice)
@@ -132,7 +128,7 @@ async saveRecipeMappings(recipeId, mappings) {
   },
 
   async updateInvoice(id, invoice) {
-    const res = await fetch(`${BASE_URL}/invoices/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/invoices/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(invoice)
@@ -142,7 +138,7 @@ async saveRecipeMappings(recipeId, mappings) {
   },
 
   async deleteInvoice(id) {
-    const res = await fetch(`${BASE_URL}/invoices/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/invoices/${id}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete invoice');
