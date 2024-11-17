@@ -16,36 +16,19 @@ export default async function handler(req, res) {
         if (!recipe) {
           return res.status(404).json({ error: 'Ricetta non trovata' });
         }
-        
-        // Converti la Map in un oggetto normale
-        const mappings = Object.fromEntries(recipe.ingredientMappings || new Map());
-        res.status(200).json(mappings);
+        res.status(200).json(recipe.ingredientMappings || {});
         break;
 
       case 'POST':
         const updatedRecipe = await Recipe.findByIdAndUpdate(
           id,
-          { 
-            $set: { 
-              ingredientMappings: req.body.mappings,
-              updatedAt: new Date()
-            } 
-          },
+          { $set: { ingredientMappings: req.body.mappings } },
           { new: true, runValidators: true }
         );
-
         if (!updatedRecipe) {
           return res.status(404).json({ error: 'Ricetta non trovata' });
         }
-
-        console.log('Mappings saved:', {
-          recipeId: id,
-          mappingsCount: Object.keys(req.body.mappings).length,
-        });
-
-        // Converti la Map in un oggetto normale per la risposta
-        const updatedMappings = Object.fromEntries(updatedRecipe.ingredientMappings || new Map());
-        res.status(200).json(updatedMappings);
+        res.status(200).json(updatedRecipe.ingredientMappings || {});
         break;
 
       default:

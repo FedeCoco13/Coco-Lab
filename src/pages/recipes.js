@@ -147,7 +147,7 @@ const RecipeManager = () => {
       setCurrentRecipe(recipe);
       console.log('Loading mappings for recipe:', recipe._id);
       
-      // Carica le associazioni dal database
+      // Prima di aprire il modal, carica le associazioni esistenti
       const mappings = await api.getRecipeMappings(recipe._id);
       console.log('Loaded mappings:', mappings);
       
