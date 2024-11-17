@@ -30,49 +30,49 @@ const RecipeManager = () => {
 
   // Caricamento dati iniziali
   useEffect(() => {
-    loadInitialData();
-  }, []);
-  
-  const loadInitialData = async () => {
-    try {
-      const [recipesData, invoicesData] = await Promise.all([
-        api.getRecipes(),
-        api.getInvoices()
-      ]);
-  
-      setRecipes(recipesData);
-  
-      // Estrai i prodotti dalle fatture
-      const allProducts = {};
-      invoicesData.forEach(invoice => {
-        invoice.products?.forEach(product => {
-          if (!allProducts[product.id]) {
-            allProducts[product.id] = {
-              ...product,
-              priceHistory: []
-            };
-          }
-          allProducts[product.id].priceHistory.push({
-            date: invoice.date,
-            price: product.price,
-            quantity: product.quantity,
-            discounts: product.discounts
-          });
+  loadInitialData();
+}, []);
+
+const loadInitialData = async () => {
+  try {
+    const [recipesData, invoicesData] = await Promise.all([
+      api.getRecipes(),
+      api.getInvoices()
+    ]);
+
+    setRecipes(recipesData);
+
+    // Estrai i prodotti dalle fatture
+    const allProducts = {};
+    invoicesData.forEach(invoice => {
+      invoice.products?.forEach(product => {
+        if (!allProducts[product.id]) {
+          allProducts[product.id] = {
+            ...product,
+            priceHistory: []
+          };
+        }
+        allProducts[product.id].priceHistory.push({
+          date: invoice.date,
+          price: product.price,
+          quantity: product.quantity,
+          discounts: product.discounts
         });
       });
-  
-      // Ordina la cronologia prezzi per data
-      Object.values(allProducts).forEach(product => {
-        product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-      });
-  
-      setProducts(Object.values(allProducts));
-  
-    } catch (error) {
-      console.error('Errore nel caricamento dei dati:', error);
-      toast.error('Errore nel caricamento dei dati');
-    }
-  };
+    });
+
+    // Ordina la cronologia prezzi per data
+    Object.values(allProducts).forEach(product => {
+      product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+
+    setProducts(Object.values(allProducts));
+
+  } catch (error) {
+    console.error('Errore nel caricamento dei dati:', error);
+    toast.error('Errore nel caricamento dei dati');
+  }
+};
   const formatWeight = (grams) => {
     if (grams >= 1000) {
       return `${(grams / 1000).toFixed(2)} kg`;
