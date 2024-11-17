@@ -143,16 +143,19 @@ const RecipeManager = () => {
   };
 
   const handleFoodCostOpen = async (recipe) => {
+    console.log('Opening food cost for recipe:', recipe); // Debug log
     try {
+      // Prima settiamo la ricetta corrente
       setCurrentRecipe(recipe);
-      console.log('Loading mappings for recipe:', recipe._id);
-      
-      // Prima di aprire il modal, carica le associazioni esistenti
-      const mappings = await api.getRecipeMappings(recipe._id);
-      console.log('Loaded mappings:', mappings);
-      
-      setCurrentMappings(mappings || {});
+      // Poi settiamo il modal come aperto
       setShowFoodCostModal(true);
+      
+      // Dopo aver aperto il modal, carichiamo le associazioni
+      const mappings = await api.getRecipeMappings(recipe._id);
+      console.log('Loaded mappings:', mappings); // Debug log
+      
+      // Settiamo le associazioni
+      setCurrentMappings(mappings || {});
     } catch (error) {
       console.error('Errore nel caricamento delle associazioni:', error);
       toast.error('Errore nel caricamento delle associazioni');
@@ -895,7 +898,10 @@ const RecipeManager = () => {
                                 <Calculator className="h-5 w-5" />
                               </button>
                               <button
-                                onClick={() => handleFoodCostOpen(recipe)}
+                              onClick={() => {
+                                console.log('Food Cost clicked for recipe:', recipe); // Debug log
+                                handleFoodCostOpen(recipe);
+                                }}
                                 className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
                                 title="Food Cost"
                               >
