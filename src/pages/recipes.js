@@ -35,11 +35,10 @@ const RecipeManager = () => {
 
   const loadInitialData = async () => {
     try {
-      const [recipesData] = await Promise.all([
-        api.getRecipes(),
-      ]);
+      const data = await api.getRecipes();
+      setRecipes(data);
 
-      // Carica i prodotti dal localStorage (temporaneo finché non creiamo un modello Products)
+      // Carica i prodotti dal localStorage (temporaneo)
       const storedProducts = localStorage.getItem('products');
       if (storedProducts) {
         const productsData = JSON.parse(storedProducts);
@@ -50,11 +49,9 @@ const RecipeManager = () => {
         setProducts(productsWithIds);
       }
 
-      setRecipes(recipesData);
-      
       // Estrai tutte le associazioni dalle ricette
       const allMappings = {};
-      recipesData.forEach(recipe => {
+      data.forEach(recipe => {
         if (recipe.ingredientMappings) {
           Object.assign(allMappings, recipe.ingredientMappings);
         }
@@ -138,6 +135,13 @@ const RecipeManager = () => {
     };
   };
 
+  const getAvailableProducts = () => {
+    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
+    return products
+      .filter(p => validSuppliers.includes(p.supplier))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
   const handleFoodCostOpen = async (recipe) => {
     try {
       setCurrentRecipe(recipe);
@@ -153,13 +157,6 @@ const RecipeManager = () => {
       console.error('Errore nel caricamento delle associazioni:', error);
       toast.error('Errore nel caricamento delle associazioni');
     }
-  };
-
-  const getAvailableProducts = () => {
-    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
-    return products
-      .filter(p => validSuppliers.includes(p.supplier))
-      .sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const saveMappings = async () => {
@@ -448,6 +445,7 @@ const RecipeManager = () => {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
+        {/* Modal Food Cost */}
         {showFoodCostModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -555,6 +553,116 @@ const RecipeManager = () => {
                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                   >
                     Chiudi
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Ricalcolo */}
+        {showRecalculateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+              <div className="p-4">
+                <h2 className="text-xl font-bold text-[#8B4513] mb-4">Ricalcola Quantità</h2>
+                <p className="mb-4 text-gray-600">
+                  Inserisci il fattore di moltiplicazione. Ad esempio:
+                  <br/>• 2 per raddoppiare le quantità
+                  <br/>• 0.5 per dimezzarle
+                </p>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={recalculateFactor}
+                  onChange={(e) => setRecalculateFactor(e.target.value)}
+                  className="w-full p-2 border rounded-lg mb-4"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setShowRecalculateModal(false);
+                      setRecalculateFactor(1);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={recalculateQuantities}
+                    className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D]"
+                  >
+                    Ricalcola
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Visualizza */}
+        {showViewModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-[#8B4513]">
+                    {recalculatedRecipe ? recalculatedRecipe.name : currentRecipe.name}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowViewModal(false);
+                      setRecalculatedRecipe(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="font-medium text-[#A0522D] mb-2">Ingredienti:</h3>
+                  {(() => {
+                    const recipe = recalculatedRecipe || currentRecipe;
+                    const { totalWeight, ingredients } = calculateRecipeTotal(recipe.ingredients);
+                    
+                    return (
+                      <>
+                        <div className="space-y-1">
+                          {ingredients.map((ing, index) => (
+                            ing.isDivider ? (
+                              <div key={index} className="border-t border-gray-300 my-2"></div>
+                            ) : (
+                              <div key={index} className="flex justify-between">
+                                <span>{ing.name}</span>
+                                <span>{ing.quantity} {ing.unit} ({ing.percentage}%)</span>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                        <div className="mt-4 text-right font-medium text-gray-700">
+                          Peso totale: {formatWeight(totalWeight)}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="font-medium text-[#A0522D] mb-2">Procedimento:</h3>
+                  <p className="text-gray-600 whitespace-pre-wrap">
+                    {(recalculatedRecipe || currentRecipe).procedure}
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => printRecipe(recalculatedRecipe || currentRecipe)}
+                    className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] flex items-center gap-2"
+                  >
+                    <Printer className="h-5 w-5" />
+                    Stampa
                   </button>
                 </div>
               </div>
