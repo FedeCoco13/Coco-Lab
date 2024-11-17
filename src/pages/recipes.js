@@ -1,5 +1,3 @@
-// src/pages/recipes.js
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash, Printer, ArrowLeft, X, Save, Calculator, Eye, Minus, DollarSign } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -27,52 +25,34 @@ const RecipeManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [ingredientMappings, setIngredientMappings] = useState({});
   const [currentMappings, setCurrentMappings] = useState({});
-
   // Caricamento dati iniziali
   useEffect(() => {
-  loadInitialData();
-}, []);
+    loadInitialData();
+  }, []);
 
-const loadInitialData = async () => {
-  try {
-    const [recipesData, invoicesData] = await Promise.all([
-      api.getRecipes(),
-      api.getInvoices()
-    ]);
+  const loadInitialData = async () => {
+    try {
+      const data = await api.getRecipes();
+      setRecipes(data);
+      console.log('Recipes loaded:', data); // Debug log
 
-    setRecipes(recipesData);
+      // Carica i prodotti dal localStorage
+      const storedProducts = localStorage.getItem('products');
+      if (storedProducts) {
+        const productsData = JSON.parse(storedProducts);
+        const productsWithIds = productsData.map(product => ({
+          ...product,
+          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
+        }));
+        setProducts(productsWithIds);
+        console.log('Products loaded:', productsWithIds); // Debug log
+      }
+    } catch (error) {
+      console.error('Errore nel caricamento dei dati:', error);
+      toast.error('Errore nel caricamento dei dati');
+    }
+  };
 
-    // Estrai i prodotti dalle fatture
-    const allProducts = {};
-    invoicesData.forEach(invoice => {
-      invoice.products?.forEach(product => {
-        if (!allProducts[product.id]) {
-          allProducts[product.id] = {
-            ...product,
-            priceHistory: []
-          };
-        }
-        allProducts[product.id].priceHistory.push({
-          date: invoice.date,
-          price: product.price,
-          quantity: product.quantity,
-          discounts: product.discounts
-        });
-      });
-    });
-
-    // Ordina la cronologia prezzi per data
-    Object.values(allProducts).forEach(product => {
-      product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-    });
-
-    setProducts(Object.values(allProducts));
-
-  } catch (error) {
-    console.error('Errore nel caricamento dei dati:', error);
-    toast.error('Errore nel caricamento dei dati');
-  }
-};
   const formatWeight = (grams) => {
     if (grams >= 1000) {
       return `${(grams / 1000).toFixed(2)} kg`;
@@ -101,21 +81,95 @@ const loadInitialData = async () => {
   };
 
   const getProductDetails = (productId) => {
+    console.log('Looking up product:', productId); // Debug log
     const product = products.find(p => p.id === productId);
-    if (!product) return null;
-    return {
+    if (!product) {
+      console.log('Product not found:', productId); // Debug log
+      return null;
+    }
+    const details = {
       name: product.name,
       supplier: product.supplier,
       price: product.priceHistory?.[0]?.price || 0
     };
+    console.log('Found product details:', details); // Debug log
+    return details;
+  };
+
+  const getAvailableProducts = () => {
+    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
+    return products
+      .filter(p => validSuppliers.includes(p.supplier))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const handleFoodCostOpen = async (recipe) => {
+    try {
+      setCurrentRecipe(recipe);
+      console.log('Loading mappings for recipe:', recipe._id);
+      
+      const mappings = await api.getRecipeMappings(recipe._id);
+      console.log('Loaded mappings:', mappings);
+      
+      // Assicuriamoci che mappings sia un oggetto valido
+      const validMappings = mappings && typeof mappings === 'object' ? mappings : {};
+      setCurrentMappings(validMappings);
+      setShowFoodCostModal(true);
+    } catch (error) {
+      console.error('Errore nel caricamento delle associazioni:', error);
+      toast.error('Errore nel caricamento delle associazioni');
+    }
+  };
+  const saveMappings = async () => {
+    try {
+      console.log('Saving mappings for recipe:', currentRecipe._id);
+      
+      // Filtra le associazioni valide rimuovendo quelle vuote
+      const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
+        if (value && value.trim() !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+
+      console.log('Valid mappings to save:', validMappings);
+
+      // Salva nel database
+      const savedMappings = await api.saveRecipeMappings(currentRecipe._id, validMappings);
+      console.log('Saved mappings response:', savedMappings);
+
+      // Aggiorna lo stato locale
+      setCurrentMappings(savedMappings);
+      
+      // Aggiorna la ricetta corrente
+      setCurrentRecipe(prev => ({
+        ...prev,
+        ingredientMappings: savedMappings
+      }));
+
+      toast.success('Associazioni salvate con successo');
+      
+      // Ricarica i dati
+      await loadInitialData();
+      
+    } catch (error) {
+      console.error('Errore nel salvare le associazioni:', error);
+      toast.error('Errore nel salvare le associazioni');
+    }
   };
 
   const calculateFoodCost = (recipe, mappings) => {
+    console.log('Calculating food cost with mappings:', mappings);
+
     const ingredientCosts = recipe.ingredients
       .filter(ing => !ing.isDivider)
       .map(ing => {
         const productId = mappings[ing.name];
+        console.log(`Looking up product for ${ing.name}:`, productId);
+        
         const productDetails = getProductDetails(productId);
+        console.log(`Product details for ${ing.name}:`, productDetails);
+        
         const quantity = parseFloat(ing.quantity);
         let cost = 0;
 
@@ -146,79 +200,6 @@ const loadInitialData = async () => {
     };
   };
 
-  const getAvailableProducts = () => {
-    const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
-    return products
-      .filter(p => validSuppliers.includes(p.supplier))
-      .sort((a, b) => {
-        // Prima ordina per fornitore
-        if (a.supplier !== b.supplier) {
-          return a.supplier.localeCompare(b.supplier);
-        }
-        // Poi per nome prodotto
-        return a.name.localeCompare(b.name);
-      });
-  };
-
-  const handleFoodCostOpen = async (recipe) => {
-    console.log('Opening food cost for recipe:', recipe); // Debug log
-    try {
-      // Prima settiamo la ricetta corrente
-      setCurrentRecipe(recipe);
-      // Poi settiamo il modal come aperto
-      setShowFoodCostModal(true);
-      
-      // Dopo aver aperto il modal, carichiamo le associazioni
-      const mappings = await api.getRecipeMappings(recipe._id);
-      console.log('Loaded mappings:', mappings); // Debug log
-      
-      // Settiamo le associazioni
-      setCurrentMappings(mappings || {});
-    } catch (error) {
-      console.error('Errore nel caricamento delle associazioni:', error);
-      toast.error('Errore nel caricamento delle associazioni');
-    }
-  };
-
-  const saveMappings = async () => {
-    try {
-      console.log('Saving mappings for recipe:', currentRecipe._id);
-      
-      // Filtra le associazioni valide
-      const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
-        if (value) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
-
-      console.log('Valid mappings to save:', validMappings);
-
-      // Salva nel database
-      await api.saveRecipeMappings(currentRecipe._id, validMappings);
-
-      // Aggiorna la ricetta corrente
-      setCurrentRecipe(prev => ({
-        ...prev,
-        ingredientMappings: validMappings
-      }));
-
-      // Aggiorna lo stato globale delle associazioni
-      setIngredientMappings(prev => ({
-        ...prev,
-        ...validMappings
-      }));
-
-      toast.success('Associazioni salvate con successo');
-      
-      // Ricarica le ricette per avere i dati aggiornati
-      await loadInitialData();
-      
-    } catch (error) {
-      console.error('Errore nel salvare le associazioni:', error);
-      toast.error('Errore nel salvare le associazioni');
-    }
-  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -242,7 +223,6 @@ const loadInitialData = async () => {
       toast.error('Errore nel salvare la ricetta');
     }
   };
-
   const addIngredient = (isDivider = false) => {
     setCurrentRecipe(prev => ({
       ...prev,
@@ -580,7 +560,6 @@ const loadInitialData = async () => {
             </div>
           </div>
         )}
-
         {/* Modal Ricalcolo */}
         {showRecalculateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -916,10 +895,7 @@ const loadInitialData = async () => {
                                 <Calculator className="h-5 w-5" />
                               </button>
                               <button
-                              onClick={() => {
-                                console.log('Food Cost clicked for recipe:', recipe); // Debug log
-                                handleFoodCostOpen(recipe);
-                                }}
+                                onClick={() => handleFoodCostOpen(recipe)}
                                 className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
                                 title="Food Cost"
                               >
