@@ -1,9 +1,7 @@
-// src/lib/api.js
-
 const BASE_URL = '/api';
 
 export const api = {
-  // Recipes
+  // Recipe APIs
   async getRecipes() {
     const res = await fetch(`${BASE_URL}/recipes`);
     if (!res.ok) throw new Error('Failed to fetch recipes');
@@ -38,53 +36,24 @@ export const api = {
     return res.json();
   },
 
-  // Ingredient Mappings
-  async getMappings(recipeId = null) {
-    const url = recipeId 
-      ? `${BASE_URL}/ingredient-mappings?recipeId=${recipeId}`
-      : `${BASE_URL}/ingredient-mappings`;
-    const res = await fetch(url);
+  // New Ingredient Mappings APIs
+  async getRecipeMappings(recipeId) {
+    const res = await fetch(`${BASE_URL}/recipes/${recipeId}/mappings`);
     if (!res.ok) throw new Error('Failed to fetch ingredient mappings');
     return res.json();
   },
 
-  async saveMappings(mappings, recipeId) {
-    const res = await fetch(`${BASE_URL}/ingredient-mappings`, {
+  async saveRecipeMappings(recipeId, mappings) {
+    const res = await fetch(`${BASE_URL}/recipes/${recipeId}/mappings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mappings, recipeId })
+      body: JSON.stringify({ mappings })
     });
     if (!res.ok) throw new Error('Failed to save ingredient mappings');
     return res.json();
   },
 
-  async updateMapping(id, mapping) {
-    const res = await fetch(`${BASE_URL}/ingredient-mappings/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mapping)
-    });
-    if (!res.ok) throw new Error('Failed to update ingredient mapping');
-    return res.json();
-  },
-
-  async deleteMapping(id) {
-    const res = await fetch(`${BASE_URL}/ingredient-mappings/${id}`, {
-      method: 'DELETE'
-    });
-    if (!res.ok) throw new Error('Failed to delete ingredient mapping');
-    return res.json();
-  },
-
-  async deleteMappingsByRecipe(recipeId) {
-    const res = await fetch(`${BASE_URL}/ingredient-mappings?recipeId=${recipeId}`, {
-      method: 'DELETE'
-    });
-    if (!res.ok) throw new Error('Failed to delete recipe mappings');
-    return res.json();
-  },
-
-  // Orders (manteniamo le funzioni esistenti)
+  // Orders APIs (manteniamo quelle esistenti)
   async getOrders() {
     const res = await fetch(`${BASE_URL}/orders`);
     if (!res.ok) throw new Error('Failed to fetch orders');
@@ -119,7 +88,7 @@ export const api = {
     return res.json();
   },
 
-  // Invoices (manteniamo le funzioni esistenti)
+  // Invoices APIs (manteniamo quelle esistenti)
   async getInvoices() {
     const res = await fetch(`${BASE_URL}/invoices`);
     if (!res.ok) throw new Error('Failed to fetch invoices');

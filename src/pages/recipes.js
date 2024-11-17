@@ -35,21 +35,11 @@ const RecipeManager = () => {
 
   const loadInitialData = async () => {
     try {
-      const [recipesData, mappingsData] = await Promise.all([
+      const [recipesData] = await Promise.all([
         api.getRecipes(),
-        api.getMappings()
       ]);
 
-      setRecipes(recipesData);
-
-      // Converti i mappings in un oggetto per facile accesso
-      const mappingsObject = mappingsData.reduce((acc, mapping) => {
-        acc[mapping.ingredientName] = mapping.productId;
-        return acc;
-      }, {});
-      setIngredientMappings(mappingsObject);
-
-      // Carica i prodotti dal localStorage (temporaneo)
+      // Carica i prodotti dal localStorage (temporaneo finché non creiamo un modello Products)
       const storedProducts = localStorage.getItem('products');
       if (storedProducts) {
         const productsData = JSON.parse(storedProducts);
@@ -59,12 +49,22 @@ const RecipeManager = () => {
         }));
         setProducts(productsWithIds);
       }
+
+      setRecipes(recipesData);
+      
+      // Estrai tutte le associazioni dalle ricette
+      const allMappings = {};
+      recipesData.forEach(recipe => {
+        if (recipe.ingredientMappings) {
+          Object.assign(allMappings, recipe.ingredientMappings);
+        }
+      });
+      setIngredientMappings(allMappings);
     } catch (error) {
       console.error('Errore nel caricamento dei dati:', error);
       toast.error('Errore nel caricamento dei dati');
     }
   };
-  // Funzioni di calcolo
   const formatWeight = (grams) => {
     if (grams >= 1000) {
       return `${(grams / 1000).toFixed(2)} kg`;
@@ -90,14 +90,6 @@ const RecipeManager = () => {
       totalWeight: totalInGrams,
       ingredients: ingredientsWithPercentage 
     };
-  };
-
-  const getLatestPriceForProduct = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (product?.priceHistory?.length > 0) {
-      return product.priceHistory[0].price;
-    }
-    return 0;
   };
 
   const getProductDetails = (productId) => {
@@ -147,15 +139,15 @@ const RecipeManager = () => {
   };
 
   const handleFoodCostOpen = async (recipe) => {
-    setCurrentRecipe(recipe);
     try {
-      // Carica le associazioni specifiche per questa ricetta
-      const mappings = await api.getMappings(recipe._id);
-      const mappingsObject = mappings.reduce((acc, mapping) => {
-        acc[mapping.ingredientName] = mapping.productId;
-        return acc;
-      }, {});
-      setCurrentMappings(mappingsObject);
+      setCurrentRecipe(recipe);
+      console.log('Loading mappings for recipe:', recipe._id);
+      
+      // Carica le associazioni dal database
+      const mappings = await api.getRecipeMappings(recipe._id);
+      console.log('Loaded mappings:', mappings);
+      
+      setCurrentMappings(mappings || {});
       setShowFoodCostModal(true);
     } catch (error) {
       console.error('Errore nel caricamento delle associazioni:', error);
@@ -172,6 +164,9 @@ const RecipeManager = () => {
 
   const saveMappings = async () => {
     try {
+      console.log('Saving mappings for recipe:', currentRecipe._id);
+      
+      // Filtra le associazioni valide
       const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
         if (value) {
           acc[key] = value;
@@ -179,18 +174,33 @@ const RecipeManager = () => {
         return acc;
       }, {});
 
-      await api.saveMappings(validMappings, currentRecipe._id);
-      setIngredientMappings(prevMappings => ({
-        ...prevMappings,
+      console.log('Valid mappings to save:', validMappings);
+
+      // Salva nel database
+      await api.saveRecipeMappings(currentRecipe._id, validMappings);
+
+      // Aggiorna la ricetta corrente
+      setCurrentRecipe(prev => ({
+        ...prev,
+        ingredientMappings: validMappings
+      }));
+
+      // Aggiorna lo stato globale delle associazioni
+      setIngredientMappings(prev => ({
+        ...prev,
         ...validMappings
       }));
+
       toast.success('Associazioni salvate con successo');
+      
+      // Ricarica le ricette per avere i dati aggiornati
+      await loadInitialData();
+      
     } catch (error) {
       console.error('Errore nel salvare le associazioni:', error);
       toast.error('Errore nel salvare le associazioni');
     }
   };
-  // Funzioni di gestione ricette
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -258,7 +268,6 @@ const RecipeManager = () => {
     if (window.confirm('Sei sicuro di voler eliminare questa ricetta?')) {
       try {
         await api.deleteRecipe(id);
-        await api.deleteMappingsByRecipe(id);
         await loadInitialData();
         toast.success('Ricetta eliminata con successo');
       } catch (error) {
@@ -288,7 +297,7 @@ const RecipeManager = () => {
     setShowRecalculateModal(false);
     setShowViewModal(true);
   };
-  // Funzioni di stampa
+
   const printRecipe = (recipe, mode = 'normal') => {
     if (mode === 'normal' || mode === 'recalculated') {
       const { totalWeight, ingredients } = calculateRecipeTotal(recipe.ingredients);
@@ -436,7 +445,6 @@ const RecipeManager = () => {
       printWindow.print();
     }
   };
-  // Prima parte del return con i modali
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
