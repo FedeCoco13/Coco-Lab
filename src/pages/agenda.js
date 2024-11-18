@@ -6,8 +6,9 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Layout from '../components/Layout';
 import { api } from '../lib/api';
+import { toast } from 'sonner';
 
-export default function OrderAgenda() {
+function OrderAgenda() {
   const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +38,6 @@ export default function OrderAgenda() {
 
     loadOrders();
   }, []);
-
   const filterOrders = () => {
     const today = startOfDay(new Date());
     
@@ -53,6 +53,7 @@ export default function OrderAgenda() {
 
     return { activeOrders, archivedOrders };
   };
+
   const getFilteredOrders = () => {
     const { activeOrders, archivedOrders } = filterOrders();
     const ordersToShow = showArchivedOrders ? archivedOrders : activeOrders;
@@ -73,15 +74,37 @@ export default function OrderAgenda() {
       try {
         await api.deleteOrder(orderId);
         setOrders(orders.filter(order => order._id !== orderId));
+        toast.success('Ordine eliminato con successo');
       } catch (err) {
         setError('Errore nell\'eliminazione dell\'ordine');
         console.error(err);
+        toast.error('Errore nell\'eliminazione dell\'ordine');
       }
     }
   };
 
   const editOrder = (order) => {
     router.push(`/orders?id=${order._id}`);
+  };
+
+  const sendWhatsApp = (order) => {
+    const details = [];
+    details.push(`📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
+    details.push(`⏰ Ora: ${order.time}`);
+    
+    if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
+    if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
+    if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
+    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
+    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+    const message = details.join('\n').trim();
+
+    window.open(
+      `https://web.whatsapp.com/send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   const printOrder = async (order) => {
@@ -127,17 +150,12 @@ export default function OrderAgenda() {
     printWindow.print();
 
     try {
-      // Aggiorna lo stato di stampa nel database
       await api.markOrderAsPrinted(order._id);
-      
-      // Aggiorna lo stato localmente
       setOrders(prevOrders => 
         prevOrders.map(o => 
           o._id === order._id ? {...o, printed: true} : o
         )
       );
-
-      // Mostra una conferma all'utente
       toast.success('Ordine stampato e contrassegnato');
     } catch (error) {
       console.error('Errore nell\'aggiornamento dello stato di stampa:', error);
@@ -217,45 +235,25 @@ export default function OrderAgenda() {
     printWindow.print();
     setShowPrintModal(false);
   };
-  const sendWhatsApp = (order) => {
-    const details = [];
-    details.push(`📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
-    details.push(`⏰ Ora: ${order.time}`);
-    
-    if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
-    if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
-    if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
-    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
-    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
-    const message = details.join('\n').trim();
-
-    window.open(
-      `https://web.whatsapp.com/send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
-      '_blank',
-      'noopener,noreferrer'
-    );
-  };
-
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header con pulsanti */}
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        {/* Header responsive */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D]"
+            className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D] w-full md:w-auto justify-center md:justify-start"
           >
             <ArrowLeft className="h-5 w-5" />
-            Torna alla Home
+            <span>Torna alla Home</span>
           </Link>
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
             <button
               onClick={() => setShowPrintModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center"
             >
               <Printer className="h-5 w-5" />
-              Stampa Lista
+              <span>Stampa Lista</span>
             </button>
             <button
               onClick={() => setShowArchivedOrders(!showArchivedOrders)}
@@ -263,31 +261,31 @@ export default function OrderAgenda() {
                 showArchivedOrders 
                   ? 'bg-amber-600 hover:bg-amber-700' 
                   : 'bg-gray-600 hover:bg-gray-700'
-              } text-white rounded-lg flex items-center gap-2`}
+              } text-white rounded-lg flex items-center gap-2 justify-center`}
             >
               <Archive className="h-5 w-5" />
-              {showArchivedOrders ? 'Ordini Attivi' : 'Archivio'}
+              <span>{showArchivedOrders ? 'Ordini Attivi' : 'Archivio'}</span>
             </button>
             <Link
               href="/orders"
-              className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D]"
+              className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] text-center flex items-center justify-center"
             >
               Nuovo Ordine
             </Link>
           </div>
         </div>
-
-        <h1 className="text-2xl font-bold text-[#8B4513] mb-6">
+  
+        <h1 className="text-2xl font-bold text-[#8B4513] mb-6 text-center md:text-left">
           {showArchivedOrders ? 'Archivio Ordini' : 'Agenda Ordini'}
         </h1>
-
+  
         {error && (
           <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
-
-        {/* Barra di ricerca */}
+  
+        {/* Barra di ricerca responsive */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -300,10 +298,11 @@ export default function OrderAgenda() {
             />
           </div>
         </div>
+  
         {/* Modal Stampa */}
         {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg w-full max-w-md mx-4">
               <h2 className="text-xl font-bold text-[#8B4513] mb-4">Stampa Lista Ordini</h2>
               <div className="space-y-4">
                 <div>
@@ -328,16 +327,16 @@ export default function OrderAgenda() {
                     className="w-full p-2 border rounded-lg"
                   />
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex flex-col md:flex-row justify-end gap-2 mt-6">
                   <button
                     onClick={() => setShowPrintModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg w-full md:w-auto"
                   >
                     Annulla
                   </button>
                   <button
                     onClick={printMultipleOrders}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center w-full md:w-auto"
                   >
                     <Printer className="h-5 w-5" />
                     Stampa
@@ -347,118 +346,229 @@ export default function OrderAgenda() {
             </div>
           </div>
         )}
-
-        {/* Tabella Ordini */}
+  
+        {/* Loading state */}
         {isLoading ? (
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-  <div className="overflow-x-auto">
-    <table className="w-full text-left">
-      <thead className="bg-[#8B4513] text-white">
-        <tr>
-          <th className="px-4 py-3 font-medium">Data e Ora</th>
-          <th className="px-4 py-3 font-medium">Cliente</th>
-          <th className="px-4 py-3 font-medium">Dettagli Ordine</th>
-          <th className="px-4 py-3 font-medium text-right">Azioni</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200">
-        {getFilteredOrders()
-          .sort((a, b) => {
-            const dateA = new Date(a.date + 'T' + a.time);
-            const dateB = new Date(b.date + 'T' + b.time);
-            return dateA - dateB;
-          })
-          .map(order => (
-            <tr 
-              key={order._id} 
-              className={`hover:bg-amber-50 ${(!order.printed || order.printed === false) ? 'bg-yellow-100' : ''}`}
-            >
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div className="font-medium text-[#8B4513]">
-                  {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {order.time}
-                </div>
-                {(!order.printed || order.printed === false) && (
-                  <div className="text-xs text-red-600 font-medium">
-                    Da stampare
-                  </div>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                <div className="font-medium">{order.customerName}</div>
-                <div className="text-sm text-gray-600">{order.customerContact}</div>
-                {order.deposit && (
-                  <div className="text-sm text-green-600">
-                    Acconto: €{parseFloat(order.deposit).toFixed(2)}
-                  </div>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                <div className="line-clamp-2">
-                  {order.description && (
-                    <div><span className="font-medium">Descrizione:</span> {order.description}</div>
-                  )}
-                  {order.waferText && (
-                    <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
-                  )}
-                  {order.waferDesign && (
-                    <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
-                  )}
-                  {order.notes && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Note:</span> {order.notes}
+          /* Continua dal loading state */
+        <>
+        {/* Vista Mobile */}
+        <div className="block md:hidden space-y-4">
+          {getFilteredOrders()
+            .sort((a, b) => {
+              const dateA = new Date(a.date + 'T' + a.time);
+              const dateB = new Date(b.date + 'T' + b.time);
+              return dateA - dateB;
+            })
+            .map(order => (
+              <div 
+                key={order._id}
+                className={`bg-white rounded-lg shadow-lg overflow-hidden ${
+                  (!order.printed || order.printed === false) ? 'border-l-4 border-red-500' : ''
+                }`}
+              >
+                {/* Header della card */}
+                <div className="p-4 border-b">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium text-[#8B4513]">
+                        {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {order.time}
+                      </div>
                     </div>
-                  )}
+                    {(!order.printed || order.printed === false) && (
+                      <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded">
+                        Da stampare
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex justify-end items-center gap-1">
+
+                {/* Contenuto della card */}
+                <div className="p-4 space-y-3">
+                  {/* Info Cliente */}
+                  <div>
+                    <div className="font-medium">{order.customerName}</div>
+                    <div className="text-sm text-gray-600">{order.customerContact}</div>
+                    {order.deposit && (
+                      <div className="text-sm text-green-600">
+                        Acconto: €{parseFloat(order.deposit).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dettagli Ordine */}
+                  <div className="space-y-2">
+                    {order.description && (
+                      <div><span className="font-medium">Descrizione:</span> {order.description}</div>
+                    )}
+                    {order.waferText && (
+                      <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
+                    )}
+                    {order.waferDesign && (
+                      <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
+                    )}
+                    {order.notes && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Note:</span> {order.notes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Azioni */}
+                <div className="border-t px-4 py-3 bg-gray-50 flex justify-end gap-2">
                   <button
                     onClick={() => printOrder(order)}
-                    className={`p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg ${
-                      (!order.printed || order.printed === false) ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg ${
+                      (!order.printed || order.printed === false)
+                        ? 'text-white bg-blue-600 hover:bg-blue-700'
+                        : 'text-blue-600 hover:bg-blue-50'
                     }`}
-                    title={(!order.printed || order.printed === false) ? 'Da stampare!' : 'Stampa'}
                   >
-                    <Printer className="h-5 w-5" />
+                    <Printer className="h-4 w-4" />
+                    <span className="text-sm">Stampa</span>
                   </button>
                   <button
                     onClick={() => sendWhatsApp(order)}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                    title="WhatsApp"
+                    className="flex items-center gap-1 px-3 py-1.5 text-green-600 hover:bg-green-50 rounded-lg"
                   >
-                    <MessageCircle className="h-5 w-5" />
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="text-sm">WhatsApp</span>
                   </button>
                   <button
                     onClick={() => editOrder(order)}
-                    className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
-                    title="Modifica"
+                    className="flex items-center gap-1 px-3 py-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
                   >
-                    <Edit className="h-5 w-5" />
+                    <Edit className="h-4 w-4" />
+                    <span className="text-sm">Modifica</span>
                   </button>
                   <button
                     onClick={() => deleteOrder(order._id)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-                    title="Elimina"
+                    className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg"
                   >
-                    <Trash className="h-5 w-5" />
+                    <Trash className="h-4 w-4" />
+                    <span className="text-sm">Elimina</span>
                   </button>
                 </div>
-              </td>
-            </tr>
-          ))}
-      </tbody>
-    </table>
+              </div>
+            ))}
+        </div>
+
+        {/* Vista Desktop */}
+        <div className="hidden md:block bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-[#8B4513] text-white">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Data e Ora</th>
+                  <th className="px-4 py-3 font-medium">Cliente</th>
+                  <th className="px-4 py-3 font-medium">Dettagli Ordine</th>
+                  <th className="px-4 py-3 font-medium text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {getFilteredOrders()
+                  .sort((a, b) => {
+                    const dateA = new Date(a.date + 'T' + a.time);
+                    const dateB = new Date(b.date + 'T' + b.time);
+                    return dateA - dateB;
+                  })
+                  .map(order => (
+                    <tr 
+                      key={order._id} 
+                      className={`hover:bg-amber-50 ${(!order.printed || order.printed === false) ? 'bg-yellow-100' : ''}`}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="font-medium text-[#8B4513]">
+                          {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {order.time}
+                        </div>
+                        {(!order.printed || order.printed === false) && (
+                          <div className="text-xs text-red-600 font-medium">
+                            Da stampare
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{order.customerName}</div>
+                        <div className="text-sm text-gray-600">{order.customerContact}</div>
+                        {order.deposit && (
+                          <div className="text-sm text-green-600">
+                            Acconto: €{parseFloat(order.deposit).toFixed(2)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="line-clamp-2">
+                          {order.description && (
+                            <div><span className="font-medium">Descrizione:</span> {order.description}</div>
+                          )}
+                          {order.waferText && (
+                            <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
+                          )}
+                          {order.waferDesign && (
+                            <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
+                          )}
+                          {order.notes && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Note:</span> {order.notes}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end items-center gap-1">
+                          <button
+                            onClick={() => printOrder(order)}
+                            className={`p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg ${
+                              (!order.printed || order.printed === false) ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                            }`}
+                            title={(!order.printed || order.printed === false) ? 'Da stampare!' : 'Stampa'}
+                          >
+                            <Printer className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => sendWhatsApp(order)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+                            title="WhatsApp"
+                          >
+                            <MessageCircle className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => editOrder(order)}
+                            className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
+                            title="Modifica"
+                          >
+                            <Edit className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => deleteOrder(order._id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Elimina"
+                          >
+                            <Trash className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    )}
   </div>
-</div>
-        )}
-      </div>
-    </Layout>
-  );
+</Layout>
+);
 }
+
+export default OrderAgenda;
