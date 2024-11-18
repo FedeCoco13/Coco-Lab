@@ -84,7 +84,7 @@ export default function OrderAgenda() {
     router.push(`/orders?id=${order._id}`);
   };
 
-  const printOrder = (order) => {
+  const printOrder = async (order) => {
     const details = [];
     details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
     details.push(`Ora: ${order.time}`);
@@ -125,6 +125,24 @@ export default function OrderAgenda() {
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.print();
+
+    try {
+      // Aggiorna lo stato di stampa nel database
+      await api.markOrderAsPrinted(order._id);
+      
+      // Aggiorna lo stato localmente
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o._id === order._id ? {...o, printed: true} : o
+        )
+      );
+
+      // Mostra una conferma all'utente
+      toast.success('Ordine stampato e contrassegnato');
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento dello stato di stampa:', error);
+      toast.error('Errore nell\'aggiornamento dello stato di stampa');
+    }
   };
 
   const printMultipleOrders = () => {

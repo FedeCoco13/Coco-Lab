@@ -143,5 +143,14 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to delete invoice');
     return res.json();
+  },
+
+  async markOrderAsPrinted(id) {
+    const res = await fetch(`/api/orders/${id}/print`, {
+      method: 'PUT'
+    });
+    if (!res.ok) throw new Error('Failed to update print status');
+    return res.json();
   }
+
 };
