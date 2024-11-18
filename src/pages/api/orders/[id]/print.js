@@ -15,18 +15,19 @@ export default async function handler(req, res) {
   try {
     await connectToDatabase();
 
-    const order = await Order.findByIdAndUpdate(
+    const updatedOrder = await Order.findByIdAndUpdate(
       id,
       { printed: true },
       { new: true }
     );
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+    if (!updatedOrder) {
+      return res.status(404).json({ error: 'Ordine non trovato' });
     }
 
-    res.status(200).json(order);
+    res.status(200).json(updatedOrder);
   } catch (error) {
-    res.status(500).json({ error: 'Error updating print status' });
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento dello stato di stampa' });
   }
 }

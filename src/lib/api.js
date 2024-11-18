@@ -146,11 +146,24 @@ export const api = {
   },
 
   async markOrderAsPrinted(id) {
-    const res = await fetch(`/api/orders/${id}/print`, {
-      method: 'PUT'
-    });
-    if (!res.ok) throw new Error('Failed to update print status');
-    return res.json();
+    try {
+      const res = await fetch(`/api/orders/${id}/print`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to update print status');
+      }
+      
+      return res.json();
+    } catch (error) {
+      console.error('Error marking order as printed:', error);
+      throw error;
+    }
   }
 
 };
