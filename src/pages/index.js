@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Layout from '../components/Layout';
 
 const Logo = () => (
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" className="h-10 md:h-12 w-10 md:w-12">
+<svg xmlns="http://www.w3.org/2000/svg" width="201" height="211">
 <path style="fill:#ffffff; stroke:none;" d="M0 0L0 211L201 211L201 0L0 0z"/>
 <path style="fill:#edc7bb; stroke:none;" d="M86 23C88.0521 23.8742 89.7472 23.9528 92 24C89.9479 23.1258 88.2528 23.0472 86 23z"/>
 <path style="fill:#f3cab9; stroke:none;" d="M72 24C73.2484 24.6848 73.5484 24.7488 75 25C73.7517 24.3152 73.4515 24.2512 72 24z"/>
