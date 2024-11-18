@@ -12,7 +12,6 @@ export default async function handler(req, res) {
 
     switch (method) {
       case 'GET':
-        // Recupera una ricetta specifica
         const recipe = await Recipe.findById(id);
         if (!recipe) {
           return res.status(404).json({ error: 'Recipe not found' });
@@ -21,7 +20,6 @@ export default async function handler(req, res) {
         break;
 
       case 'PUT':
-        // Aggiorna una ricetta
         const updatedRecipe = await Recipe.findByIdAndUpdate(id, req.body, {
           new: true,
           runValidators: true,
@@ -33,7 +31,6 @@ export default async function handler(req, res) {
         break;
 
       case 'DELETE':
-        // Elimina una ricetta
         const deletedRecipe = await Recipe.findByIdAndDelete(id);
         if (!deletedRecipe) {
           return res.status(404).json({ error: 'Recipe not found' });
@@ -46,6 +43,7 @@ export default async function handler(req, res) {
         res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
+    console.error('API Error:', error);
     res.status(500).json({ error: error.message });
   }
 }

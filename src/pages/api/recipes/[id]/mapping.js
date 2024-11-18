@@ -7,30 +7,35 @@ export default async function handler(req, res) {
     method,
   } = req;
 
-  console.log('API Request:', { method, id });
-
-  if (!id) {
-    return res.status(400).json({ error: 'Recipe ID is required' });
-  }
+  console.log('Mappings API called:', { method, id });
 
   try {
     await connectToDatabase();
+    console.log('Connected to database');
+
+    if (!id) {
+      console.error('No ID provided');
+      return res.status(400).json({ error: 'Recipe ID is required' });
+    }
+
+    // Verifica che l'ID sia valido
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      console.error('Invalid ID format');
+      return res.status(400).json({ error: 'Invalid recipe ID format' });
+    }
 
     switch (method) {
       case 'GET':
         try {
-          console.log('Finding recipe...');
-          const recipe = await Recipe.findById(id);
+          const recipe = await Recipe.findById(id).lean();
+          console.log('Recipe found:', recipe ? 'yes' : 'no');
           
           if (!recipe) {
-            console.log('Recipe not found');
             return res.status(404).json({ error: 'Recipe not found' });
           }
           
-          console.log('Found recipe:', recipe._id);
           const mappings = recipe.ingredientMappings || {};
           console.log('Returning mappings:', mappings);
-          
           return res.status(200).json(mappings);
         } catch (error) {
           console.error('GET Error:', error);
@@ -40,10 +45,9 @@ export default async function handler(req, res) {
       case 'POST':
         try {
           const { mappings } = req.body;
-          console.log('Received mappings data:', mappings);
-          
+          console.log('Received mappings:', mappings);
+
           if (!mappings || typeof mappings !== 'object') {
-            console.error('Invalid mappings data received:', req.body);
             return res.status(400).json({ error: 'Invalid mappings data' });
           }
 
@@ -51,16 +55,13 @@ export default async function handler(req, res) {
             id,
             { $set: { ingredientMappings: mappings } },
             { new: true, runValidators: true }
-          );
+          ).lean();
 
           if (!updatedRecipe) {
-            console.log('Recipe not found for update');
             return res.status(404).json({ error: 'Recipe not found' });
           }
 
-          console.log('Updated recipe:', updatedRecipe._id);
-          console.log('New mappings:', updatedRecipe.ingredientMappings);
-          
+          console.log('Updated mappings:', updatedRecipe.ingredientMappings);
           return res.status(200).json(updatedRecipe.ingredientMappings || {});
         } catch (error) {
           console.error('POST Error:', error);
@@ -74,9 +75,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('API Error:', error);
     return res.status(500).json({ 
-      error: 'Internal Server Error', 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: 'Internal Server Error',
+      details: error.message 
     });
   }
 }
