@@ -32,21 +32,42 @@ const RecipeManager = () => {
 
   const loadInitialData = async () => {
     try {
+      // Carica le ricette
       const data = await api.getRecipes();
       setRecipes(data);
-      console.log('Recipes loaded:', data); // Debug log
+      console.log('Recipes loaded:', data);
 
-      // Carica i prodotti dal localStorage
-      const storedProducts = localStorage.getItem('products');
-      if (storedProducts) {
-        const productsData = JSON.parse(storedProducts);
-        const productsWithIds = productsData.map(product => ({
-          ...product,
-          id: product.id || `${product.supplier}-${product.name}`.replace(/\s+/g, '-').toLowerCase()
-        }));
-        setProducts(productsWithIds);
-        console.log('Products loaded:', productsWithIds); // Debug log
-      }
+      // Carica i prodotti dalle fatture nel database
+      const invoices = await api.getInvoices();
+      console.log('Invoices loaded:', invoices);
+
+      const allProducts = {};
+      
+      invoices.forEach(invoice => {
+        invoice.products.forEach(product => {
+          if (!allProducts[product.id]) {
+            allProducts[product.id] = {
+              ...product,
+              priceHistory: []
+            };
+          }
+          allProducts[product.id].priceHistory.push({
+            date: invoice.date,
+            price: product.price,
+            quantity: product.quantity,
+            discounts: product.discounts
+          });
+        });
+      });
+
+      // Ordina la cronologia dei prezzi per data
+      Object.values(allProducts).forEach(product => {
+        product.priceHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+      });
+
+      console.log('Processed products:', allProducts);
+      setProducts(Object.values(allProducts));
+
     } catch (error) {
       console.error('Errore nel caricamento dei dati:', error);
       toast.error('Errore nel caricamento dei dati');
@@ -81,26 +102,40 @@ const RecipeManager = () => {
   };
 
   const getProductDetails = (productId) => {
-    console.log('Looking up product:', productId); // Debug log
+    console.log('Looking up product:', productId);
     const product = products.find(p => p.id === productId);
-    if (!product) {
-      console.log('Product not found:', productId); // Debug log
+    if (!product || !product.priceHistory || product.priceHistory.length === 0) {
+      console.log('Product not found or no price history:', productId);
       return null;
     }
+
     const details = {
       name: product.name,
       supplier: product.supplier,
-      price: product.priceHistory?.[0]?.price || 0
+      price: product.priceHistory[0].price, // Prende il prezzo più recente
+      lastUpdated: product.priceHistory[0].date
     };
-    console.log('Found product details:', details); // Debug log
+    console.log('Found product details:', details);
     return details;
   };
 
   const getAvailableProducts = () => {
+    console.log('Getting available products from:', products);
     const validSuppliers = ['CEDIAL', 'DOLCIFORNITURE', 'PREGEL', 'EUROVO'];
-    return products
-      .filter(p => validSuppliers.includes(p.supplier))
+    const availableProducts = products
+      .filter(p => {
+        const isValidSupplier = validSuppliers.includes(p.supplier);
+        const hasPrice = p.priceHistory && p.priceHistory.length > 0;
+        return isValidSupplier && hasPrice;
+      })
+      .map(p => ({
+        ...p,
+        currentPrice: p.priceHistory[0].price // Prende il prezzo più recente
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log('Available products:', availableProducts);
+    return availableProducts;
   };
 
   const handleFoodCostOpen = async (recipe) => {
@@ -484,23 +519,26 @@ const RecipeManager = () => {
                         <span className="block md:inline">{ing.name}</span>
                       </div>
                       <div className="w-full md:w-2/3">
-                        <select
-                          value={currentMappings[ing.name] || ''}
-                          onChange={(e) => {
-                            setCurrentMappings(prev => ({
-                              ...prev,
-                              [ing.name]: e.target.value
-                            }));
-                          }}
-                          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-                        >
-                          <option value="">Seleziona prodotto</option>
-                          {getAvailableProducts().map(product => (
-                            <option key={product.id} value={product.id}>
-                              {product.name} ({product.supplier})
-                            </option>
-                          ))}
-                        </select>
+                      <select
+                        value={currentMappings[ing.name] || ''}
+                        onChange={(e) => {
+                        setCurrentMappings(prev => ({
+                        ...prev,
+                        [ing.name]: e.target.value
+                      }));
+                      }}
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
+                      >
+                      <option value="">Seleziona prodotto</option>
+                      {getAvailableProducts().map(product => (
+                      <option 
+                      key={product.id} 
+                       value={product.id}
+                      >
+                      {product.name} ({product.supplier}) - €{product.currentPrice.toFixed(2)}
+                      </option>
+                      ))}
+                      </select>
                       </div>
                     </div>
                   ))}
