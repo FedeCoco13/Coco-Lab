@@ -25,6 +25,7 @@ export default function OrderManager() {
     printed: false
   });
 
+  // Caricamento ordine esistente
   useEffect(() => {
     if (id) {
       const loadOrder = async () => {
@@ -46,6 +47,7 @@ export default function OrderManager() {
       loadOrder();
     }
   }, [id]);
+  // Form handlers
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -73,6 +75,14 @@ export default function OrderManager() {
     }
   };
 
+  const handleTextChange = (e, field) => {
+    e.preventDefault();
+    setCurrentOrder(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+  };
+
   const handleDepositChange = (e) => {
     e.preventDefault();
     const value = e.target.value;
@@ -84,25 +94,21 @@ export default function OrderManager() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
-            <div className="text-xl font-bold text-[#8B4513]">Caricamento...</div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const handleFocus = (e) => {
+    e.preventDefault();
+    // Previene lo scroll automatico su iOS
+    setTimeout(() => {
+      e.target.scrollIntoViewIfNeeded({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
 
-  // Funzioni helper per il form mobile
-  const TimeSelector = ({ label, value, onChange, options }) => (
+  // Componenti di utilità
+  const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
       onChange={onChange}
-      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-lg"
+      onFocus={handleFocus}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base touch-manipulation"
       required
     >
       {options.map(option => (
@@ -120,22 +126,19 @@ export default function OrderManager() {
     </div>
   );
 
-  const handleFocus = (e) => {
-    // Previene lo scroll automatico su iOS
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
-  };
-  
-  const handleTextChange = (e, field) => {
-    e.preventDefault();
-    const value = e.target.value;
-    setCurrentOrder(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  
+  // Loading state
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B4513]"></div>
+            <div className="text-xl font-bold text-[#8B4513]">Caricamento...</div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
@@ -168,133 +171,160 @@ export default function OrderManager() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Sezione Data e Ora - Mobile */}
-<div className="block md:hidden">
-  <FormSection title="Data e Ora">
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Data
-        </label>
-        <input
-          type="date"
-          value={currentOrder.date}
-          onChange={(e) => handleTextChange(e, 'date')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-          required
-        />
-      </div>
-    </div>
-  </FormSection>
+            {/* Vista Mobile */}
+            <div className="block md:hidden">
+              {/* Data e Ora - Mobile */}
+              <FormSection title="Data e Ora">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Data
+                    </label>
+                    <input
+                      type="date"
+                      value={currentOrder.date}
+                      onChange={(e) => handleTextChange(e, 'date')}
+                      onFocus={handleFocus}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ora
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <TimeSelector
+                          value={currentOrder.time.split(':')[0]}
+                          onChange={(e) => {
+                            const minutes = currentOrder.time.split(':')[1];
+                            handleTextChange(
+                              { ...e, target: { value: `${e.target.value}:${minutes}` } },
+                              'time'
+                            );
+                          }}
+                          options={Array.from({ length: 13 }, (_, i) => i + 7)}
+                        />
+                      </div>
+                      <div>
+                        <TimeSelector
+                          value={currentOrder.time.split(':')[1]}
+                          onChange={(e) => {
+                            const hours = currentOrder.time.split(':')[0];
+                            handleTextChange(
+                              { ...e, target: { value: `${hours}:${e.target.value}` } },
+                              'time'
+                            );
+                          }}
+                          options={Array.from({ length: 6 }, (_, i) => i * 10)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
 
-  {/* Sezione Descrizione - Mobile */}
-  <FormSection title="Dettagli Ordine">
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Descrizione Ordine
-        </label>
-        <textarea
-          value={currentOrder.description}
-          onChange={(e) => handleTextChange(e, 'description')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-lg touch-manipulation"
-          required
-        />
-      </div>
-    </div>
-  </FormSection>
+              {/* Descrizione - Mobile */}
+              <FormSection title="Dettagli Ordine">
+                <textarea
+                  value={currentOrder.description}
+                  onChange={(e) => handleTextChange(e, 'description')}
+                  onFocus={handleFocus}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base touch-manipulation"
+                  required
+                />
+              </FormSection>
 
-  {/* Sezione Cialda - Mobile */}
-  <FormSection title="Dettagli Cialda">
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Scritta su Cialda
-        </label>
-        <input
-          type="text"
-          value={currentOrder.waferText}
-          onChange={(e) => handleTextChange(e, 'waferText')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Disegno su Cialda
-        </label>
-        <input
-          type="text"
-          value={currentOrder.waferDesign}
-          onChange={(e) => handleTextChange(e, 'waferDesign')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-        />
-      </div>
-    </div>
-  </FormSection>
+              {/* Cialda - Mobile */}
+              <FormSection title="Dettagli Cialda">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Scritta su Cialda
+                    </label>
+                    <input
+                      type="text"
+                      value={currentOrder.waferText}
+                      onChange={(e) => handleTextChange(e, 'waferText')}
+                      onFocus={handleFocus}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Disegno su Cialda
+                    </label>
+                    <input
+                      type="text"
+                      value={currentOrder.waferDesign}
+                      onChange={(e) => handleTextChange(e, 'waferDesign')}
+                      onFocus={handleFocus}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                    />
+                  </div>
+                </div>
+              </FormSection>
 
-  {/* Note - Mobile */}
-  <FormSection title="Note Aggiuntive">
-    <textarea
-      value={currentOrder.notes}
-      onChange={(e) => handleTextChange(e, 'notes')}
-      onFocus={handleFocus}
-      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-lg touch-manipulation"
-      placeholder="Inserisci eventuali note..."
-    />
-  </FormSection>
+              {/* Note - Mobile */}
+              <FormSection title="Note Aggiuntive">
+                <textarea
+                  value={currentOrder.notes}
+                  onChange={(e) => handleTextChange(e, 'notes')}
+                  onFocus={handleFocus}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base touch-manipulation"
+                  placeholder="Inserisci eventuali note..."
+                />
+              </FormSection>
 
-  {/* Informazioni Cliente - Mobile */}
-  <FormSection title="Informazioni Cliente">
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Nome Cliente
-        </label>
-        <input
-          type="text"
-          value={currentOrder.customerName}
-          onChange={(e) => handleTextChange(e, 'customerName')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Contatto Cliente
-        </label>
-        <input
-          type="text"
-          value={currentOrder.customerContact}
-          onChange={(e) => handleTextChange(e, 'customerContact')}
-          onFocus={handleFocus}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Acconto €
-        </label>
-        <div className="relative">
-          <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            value={currentOrder.deposit}
-            onChange={handleDepositChange}
-            onFocus={handleFocus}
-            placeholder="0.00"
-            className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-lg touch-manipulation"
-          />
-        </div>
-      </div>
-    </div>
-  </FormSection>
-</div>
+              {/* Cliente - Mobile */}
+              <FormSection title="Informazioni Cliente">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome Cliente
+                    </label>
+                    <input
+                      type="text"
+                      value={currentOrder.customerName}
+                      onChange={(e) => handleTextChange(e, 'customerName')}
+                      onFocus={handleFocus}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contatto Cliente
+                    </label>
+                    <input
+                      type="text"
+                      value={currentOrder.customerContact}
+                      onChange={(e) => handleTextChange(e, 'customerContact')}
+                      onFocus={handleFocus}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Acconto €
+                    </label>
+                    <div className="relative">
+                      <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <input
+                        type="text"
+                        value={currentOrder.deposit}
+                        onChange={handleDepositChange}
+                        onFocus={handleFocus}
+                        placeholder="0.00"
+                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base touch-manipulation"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+            </div>
             {/* Layout Desktop */}
             <div className="hidden md:block bg-white rounded-lg shadow-lg p-6">
               {/* Data e Ora - Desktop */}
@@ -308,7 +338,7 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
+                      onChange={(e) => handleTextChange(e, 'date')}
                       className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       required
                     />
@@ -326,10 +356,10 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[0]}
                         onChange={(e) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          setCurrentOrder({
-                            ...currentOrder,
-                            time: `${e.target.value}:${minutes}`
-                          });
+                          handleTextChange(
+                            { target: { value: `${e.target.value}:${minutes}` } },
+                            'time'
+                          );
                         }}
                         className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
                         required
@@ -347,10 +377,10 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[1]}
                         onChange={(e) => {
                           const hours = currentOrder.time.split(':')[0];
-                          setCurrentOrder({
-                            ...currentOrder,
-                            time: `${hours}:${e.target.value}`
-                          });
+                          handleTextChange(
+                            { target: { value: `${hours}:${e.target.value}` } },
+                            'time'
+                          );
                         }}
                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
                         required
@@ -373,7 +403,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+                  onChange={(e) => handleTextChange(e, 'description')}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
                   required
                 />
@@ -388,7 +418,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferText}
-                    onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
+                    onChange={(e) => handleTextChange(e, 'waferText')}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -400,7 +430,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferDesign}
-                    onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
+                    onChange={(e) => handleTextChange(e, 'waferDesign')}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -413,7 +443,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
+                  onChange={(e) => handleTextChange(e, 'notes')}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
                 />
               </div>
@@ -427,7 +457,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerName}
-                    onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+                    onChange={(e) => handleTextChange(e, 'customerName')}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -440,7 +470,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerContact}
-                    onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+                    onChange={(e) => handleTextChange(e, 'customerContact')}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
