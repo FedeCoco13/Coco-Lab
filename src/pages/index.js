@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Layout from '../components/Layout';
 
 const Logo = () => (
-  <svg version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 201 211" enable-background="new 0 0 201 211" className="h-12 w-12">
+  <svg version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 201 211" enable-background="new 0 0 201 211" className="h-10 md:h-12 w-10 md:w-12">
     <path fill="none" opacity="1.000000" stroke="#000000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6.000000"
         d="M40.000000,53.500000 C38.339321,58.362560 35.554012,62.157730 30.519535,64.051918 C29.222885,64.539780 28.051315,65.545479 27.023026,66.524185 C24.569162,68.859741 23.707071,70.965111 25.863884,74.581184 C33.217438,86.910027 39.053276,99.966667 42.516758,113.995865 C45.242840,125.038139 47.374023,136.180374 48.456463,147.504166 C48.631161,149.331802 48.990784,150.986099 50.000000,152.500000"/>
     <path fill="none" opacity="1.000000" stroke="#000000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="9.000000"
@@ -21,24 +21,25 @@ export default function Home() {
   return (
     <Layout>
       <div className="min-h-screen bg-amber-50">
+        {/* Header Responsive */}
         <header className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="flex justify-between items-center">
+          <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-0 justify-between items-center">
               <div className="flex items-center gap-3">
                 <Logo />
-                <div>
-                  <h1 className="text-3xl font-bold text-[#8B4513]">COCO LAB</h1>
+                <div className="text-center md:text-left">
+                  <h1 className="text-2xl md:text-3xl font-bold text-[#8B4513]">COCO LAB</h1>
                   <p className="text-sm text-[#A0522D]">Gestionale Laboratorio</p>
                 </div>
               </div>
               {session && (
-                <div className="flex items-center gap-4">
-                  <span className="text-[#8B4513]">
+                <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
+                  <span className="text-[#8B4513] text-sm md:text-base text-center">
                     {session.user.email}
                   </span>
                   <button
                     onClick={() => signOut({ callbackUrl: '/login' })}
-                    className="px-4 py-2 text-[#8B4513] hover:bg-amber-50 rounded-lg flex items-center gap-2"
+                    className="w-full md:w-auto px-4 py-2 text-[#8B4513] hover:bg-amber-50 rounded-lg flex items-center justify-center gap-2"
                   >
                     <LogOut className="h-5 w-5" />
                     Esci
@@ -49,33 +50,50 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <Link href="/orders" className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center">
-              <ShoppingCart className="h-12 w-12 text-[#8B4513] mb-4 mx-auto" />
-              <h2 className="text-xl font-bold text-[#8B4513]">Nuovo Ordine</h2>
+        {/* Main Content Responsive */}
+        <main className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {/* Menu Cards */}
+            <Link 
+              href="/orders" 
+              className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center flex flex-col items-center"
+            >
+              <ShoppingCart className="h-10 w-10 md:h-12 md:w-12 text-[#8B4513] mb-3 md:mb-4" />
+              <h2 className="text-lg md:text-xl font-bold text-[#8B4513]">Nuovo Ordine</h2>
             </Link>
 
-            <Link href="/agenda" className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center">
-              <Calendar className="h-12 w-12 text-[#8B4513] mb-4 mx-auto" />
-              <h2 className="text-xl font-bold text-[#8B4513]">Agenda Ordini</h2>
+            <Link 
+              href="/agenda" 
+              className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center flex flex-col items-center"
+            >
+              <Calendar className="h-10 w-10 md:h-12 md:w-12 text-[#8B4513] mb-3 md:mb-4" />
+              <h2 className="text-lg md:text-xl font-bold text-[#8B4513]">Agenda Ordini</h2>
             </Link>
 
-            <Link href="/recipes" className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center">
-              <Book className="h-12 w-12 text-[#8B4513] mb-4 mx-auto" />
-              <h2 className="text-xl font-bold text-[#8B4513]">Ricette</h2>
+            <Link 
+              href="/recipes" 
+              className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center flex flex-col items-center"
+            >
+              <Book className="h-10 w-10 md:h-12 md:w-12 text-[#8B4513] mb-3 md:mb-4" />
+              <h2 className="text-lg md:text-xl font-bold text-[#8B4513]">Ricette</h2>
             </Link>
 
-            <Link href="/invoices" className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center">
-              <FileText className="h-12 w-12 text-[#8B4513] mb-4 mx-auto" />
-              <h2 className="text-xl font-bold text-[#8B4513]">Fatture</h2>
+            <Link 
+              href="/invoices" 
+              className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-amber-100 text-center flex flex-col items-center"
+            >
+              <FileText className="h-10 w-10 md:h-12 md:w-12 text-[#8B4513] mb-3 md:mb-4" />
+              <h2 className="text-lg md:text-xl font-bold text-[#8B4513]">Fatture</h2>
             </Link>
           </div>
         </main>
 
-        <footer className="bg-white border-t mt-12">
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <p className="text-center text-[#A0522D]">© 2024 COCO LAB - Gestionale Laboratorio</p>
+        {/* Footer Responsive */}
+        <footer className="bg-white border-t mt-auto">
+          <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
+            <p className="text-center text-sm md:text-base text-[#A0522D]">
+              © 2024 COCO LAB - Gestionale Laboratorio
+            </p>
           </div>
         </footer>
       </div>
