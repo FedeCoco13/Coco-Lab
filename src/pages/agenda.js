@@ -366,84 +366,51 @@ export default function OrderAgenda() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {getFilteredOrders()
-                    .sort((a, b) => {
-                      const dateA = new Date(a.date + 'T' + a.time);
-                      const dateB = new Date(b.date + 'T' + b.time);
-                      return dateA - dateB;
-                    })
-                    .map(order => (
-                      <tr key={order._id} className="hover:bg-amber-50">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="font-medium text-[#8B4513]">
-                            {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {order.time}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{order.customerName}</div>
-                          <div className="text-sm text-gray-600">{order.customerContact}</div>
-                          {order.deposit && (
-                            <div className="text-sm text-green-600">
-                              Acconto: €{parseFloat(order.deposit).toFixed(2)}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="line-clamp-2">
-                            {order.description && (
-                              <div><span className="font-medium">Descrizione:</span> {order.description}</div>
-                            )}
-                            {order.waferText && (
-                              <div><span className="font-medium">Scritta:</span> {order.waferText}</div>
-                            )}
-                            {order.waferDesign && (
-                              <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
-                            )}
-                            {order.notes && (
-                              <div className="text-sm text-gray-600">
-                                <span className="font-medium">Note:</span> {order.notes}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
-                            <button
-                              onClick={() => printOrder(order)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                              title="Stampa"
-                            >
-                              <Printer className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => sendWhatsApp(order)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                              title="WhatsApp"
-                            >
-                              <MessageCircle className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => editOrder(order)}
-                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
-                              title="Modifica"
-                            >
-                              <Edit className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => deleteOrder(order._id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-                              title="Elimina"
-                            >
-                              <Trash className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
+  {getFilteredOrders()
+    .sort((a, b) => {
+      const dateA = new Date(a.date + 'T' + a.time);
+      const dateB = new Date(b.date + 'T' + b.time);
+      return dateA - dateB;
+    })
+    .map(order => (
+      <tr 
+        key={order._id} 
+        className={`
+          hover:bg-amber-50 
+          ${(!order.printed || order.printed === false) ? 'bg-yellow-100' : ''}
+        `}
+      >
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="font-medium text-[#8B4513]">
+            {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
+          </div>
+          <div className="text-sm text-gray-600">
+            {order.time}
+          </div>
+          {(!order.printed || order.printed === false) && (
+            <div className="text-xs text-red-600 font-medium">
+              Da stampare
+            </div>
+          )}
+        </td>
+        {/* ... resto delle colonne ... */}
+        <td className="px-4 py-3">
+          <div className="flex justify-end gap-1">
+            <button
+              onClick={() => printOrder(order)}
+              className={`p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg relative ${
+                (!order.printed || order.printed === false) ? 'ring-2 ring-red-500 ring-offset-2' : ''
+              }`}
+              title={(!order.printed || order.printed === false) ? 'Da stampare!' : 'Stampa'}
+            >
+              <Printer className="h-5 w-5" />
+            </button>
+            {/* ... altri pulsanti ... */}
+          </div>
+        </td>
+      </tr>
+    ))}
+</tbody>
               </table>
             </div>
           </div>

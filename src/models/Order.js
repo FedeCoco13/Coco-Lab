@@ -24,7 +24,7 @@ const OrderSchema = new mongoose.Schema({
   deposit: String,
   printed: {
     type: Boolean,
-    default: false
+    default: false // Questo assicura che ogni nuovo ordine abbia printed=false
   },
   createdAt: {
     type: Date,

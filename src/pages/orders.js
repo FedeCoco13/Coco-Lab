@@ -20,7 +20,8 @@ export default function OrderManager() {
     notes: '',
     customerName: '',
     customerContact: '',
-    deposit: ''
+    deposit: '',
+    printed: false
   });
 
   // Carica l'ordine se siamo in modalità modifica
@@ -49,14 +50,18 @@ export default function OrderManager() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
+  
     try {
       if (id) {
         // Aggiorna ordine esistente
         await api.updateOrder(id, currentOrder);
       } else {
-        // Crea nuovo ordine
-        await api.createOrder(currentOrder);
+        // Crea nuovo ordine con printed impostato a false
+        const newOrder = {
+          ...currentOrder,
+          printed: false
+        };
+        await api.createOrder(newOrder);
       }
       router.push('/agenda');
     } catch (err) {
