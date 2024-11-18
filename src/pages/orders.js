@@ -76,15 +76,16 @@ export default function OrderManager() {
   };
 
   const handleTextChange = (e, field) => {
-    e.preventDefault();
+    // Rimuoviamo preventDefault per permettere l'input normale
+    const value = e.target.value;
     setCurrentOrder(prev => ({
       ...prev,
-      [field]: e.target.value
+      [field]: value
     }));
   };
 
   const handleDepositChange = (e) => {
-    e.preventDefault();
+    // Rimuoviamo preventDefault per permettere l'input normale
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
       setCurrentOrder(prev => ({
@@ -95,11 +96,16 @@ export default function OrderManager() {
   };
 
   const handleFocus = (e) => {
-    e.preventDefault();
-    // Previene lo scroll automatico su iOS
+    // Rimuoviamo scrollIntoView che può causare problemi su alcuni dispositivi
+    // e sostituiamo con un piccolo delay per il focus
     setTimeout(() => {
-      e.target.scrollIntoViewIfNeeded({ behavior: 'smooth', block: 'center' });
-    }, 100);
+      if (document.activeElement === e.target) {
+        window.scrollTo({
+          top: window.scrollY + e.target.getBoundingClientRect().top - 150,
+          behavior: 'smooth'
+        });
+      }
+    }, 300);
   };
 
   // Componenti di utilità

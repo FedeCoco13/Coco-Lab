@@ -23,5 +23,13 @@ export default function Layout({ children }) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen flex flex-col overflow-x-hidden bg-amber-50">
+      <div className="flex-1 relative">
+        <main className="w-full h-full overflow-y-auto webkit-overflow-scrolling-touch">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 }
