@@ -12,7 +12,7 @@ export default NextAuth({
       async authorize(credentials) {
         try {
           // Credenziali hardcoded per test
-          if (credentials.email === "coco@" && 
+          if (credentials.email === "lab.art.coco@gmail.com" && 
               credentials.password === "coco2013") {
             return {
               id: '1',
