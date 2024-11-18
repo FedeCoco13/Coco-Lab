@@ -112,7 +112,8 @@ const RecipeManager = () => {
     const details = {
       name: product.name,
       supplier: product.supplier,
-      price: product.priceHistory[0].price, // Prende il prezzo più recente
+      price: product.priceHistory[0].price,
+      iva: parseFloat(product.iva) || 0, // Aggiungiamo l'IVA
       lastUpdated: product.priceHistory[0].date
     };
     console.log('Found product details:', details);
@@ -228,11 +229,17 @@ const RecipeManager = () => {
         
         const quantity = parseFloat(ing.quantity);
         let cost = 0;
+        let priceWithIva = 0;
 
         if (productDetails) {
+          // Calcola il prezzo con IVA
+          const ivaMultiplier = 1 + (productDetails.iva / 100);
+          priceWithIva = productDetails.price * ivaMultiplier;
+          
+          // Calcola il costo basato sull'unità di misura
           cost = ing.unit === 'kg' ? 
-            quantity * productDetails.price : 
-            (quantity / 1000) * productDetails.price;
+            quantity * priceWithIva : 
+            (quantity / 1000) * priceWithIva;
         }
 
         return {
@@ -240,6 +247,8 @@ const RecipeManager = () => {
           productName: productDetails ? `${productDetails.name} (${productDetails.supplier})` : 'Non associato',
           quantity: `${quantity} ${ing.unit}`,
           unitPrice: productDetails ? productDetails.price : 0,
+          priceWithIva: productDetails ? priceWithIva : 0,
+          iva: productDetails ? productDetails.iva : 0,
           cost: cost,
           mapped: !!productDetails
         };
@@ -557,37 +566,41 @@ const RecipeManager = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Riepilogo Costi</h3>
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[640px]">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left">Ingrediente</th>
-                          <th className="px-4 py-2 text-left">Prodotto Associato</th>
-                          <th className="px-4 py-2 text-right">Quantità</th>
-                          <th className="px-4 py-2 text-right">Prezzo/kg</th>
-                          <th className="px-4 py-2 text-right">Costo</th>
-                          <th className="px-4 py-2 text-right">% sul Totale</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {calculateFoodCost(currentRecipe, currentMappings).ingredients.map((ing, index) => (
-                          <tr key={index} className={!ing.mapped ? 'bg-yellow-50' : ''}>
-                            <td className="px-4 py-2">{ing.name}</td>
-                            <td className="px-4 py-2">{ing.productName}</td>
-                            <td className="px-4 py-2 text-right">{ing.quantity}</td>
-                            <td className="px-4 py-2 text-right">€{ing.unitPrice.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-right">€{ing.cost.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-right">{ing.percentage}%</td>
-                          </tr>
-                        ))}
-                        <tr className="font-bold bg-gray-50">
-                          <td colSpan="4" className="px-4 py-2">Costo Totale</td>
-                          <td className="px-4 py-2 text-right">
-                            €{calculateFoodCost(currentRecipe, currentMappings).total.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-2 text-right">100%</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <table className="w-full min-w-[640px]">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-4 py-2 text-left">Ingrediente</th>
+        <th className="px-4 py-2 text-left">Prodotto Associato</th>
+        <th className="px-4 py-2 text-right">Quantità</th>
+        <th className="px-4 py-2 text-right">Prezzo/kg</th>
+        <th className="px-4 py-2 text-right">IVA %</th>
+        <th className="px-4 py-2 text-right">Prezzo/kg con IVA</th>
+        <th className="px-4 py-2 text-right">Costo</th>
+        <th className="px-4 py-2 text-right">% sul Totale</th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-200">
+      {calculateFoodCost(currentRecipe, currentMappings).ingredients.map((ing, index) => (
+        <tr key={index} className={!ing.mapped ? 'bg-yellow-50' : ''}>
+          <td className="px-4 py-2">{ing.name}</td>
+          <td className="px-4 py-2">{ing.productName}</td>
+          <td className="px-4 py-2 text-right">{ing.quantity}</td>
+          <td className="px-4 py-2 text-right">€{ing.unitPrice.toFixed(2)}</td>
+          <td className="px-4 py-2 text-right">{ing.iva}%</td>
+          <td className="px-4 py-2 text-right">€{ing.priceWithIva.toFixed(2)}</td>
+          <td className="px-4 py-2 text-right">€{ing.cost.toFixed(2)}</td>
+          <td className="px-4 py-2 text-right">{ing.percentage}%</td>
+        </tr>
+      ))}
+      <tr className="font-bold bg-gray-50">
+        <td colSpan="6" className="px-4 py-2">Costo Totale (IVA inclusa)</td>
+        <td className="px-4 py-2 text-right">
+          €{calculateFoodCost(currentRecipe, currentMappings).total.toFixed(2)}
+        </td>
+        <td className="px-4 py-2 text-right">100%</td>
+      </tr>
+    </tbody>
+  </table>
                   </div>
                 </div>
               </div>
