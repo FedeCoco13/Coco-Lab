@@ -16,15 +16,16 @@ const RecipeSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Il procedimento è obbligatorio']
   },
-  // Modifichiamo la struttura delle associazioni per una migliore serializzazione
   ingredientMappings: {
     type: Object,
     default: {},
+    // Assicuriamoci che le mappature vengano serializzate correttamente
     get: function(data) {
-      return data ? JSON.parse(JSON.stringify(data)) : {};
-    },
-    set: function(data) {
-      return data ? JSON.parse(JSON.stringify(data)) : {};
+      try {
+        return typeof data === 'object' ? data : {};
+      } catch (e) {
+        return {};
+      }
     }
   },
   createdAt: {
@@ -36,32 +37,26 @@ const RecipeSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  // Aggiungiamo queste opzioni per gestire meglio la serializzazione
-  toJSON: {
-    getters: true,
-    virtuals: true,
-    transform: function(doc, ret) {
-      if (ret.ingredientMappings) {
-        ret.ingredientMappings = JSON.parse(JSON.stringify(ret.ingredientMappings));
-      }
-      return ret;
-    }
-  },
-  toObject: {
-    getters: true,
-    virtuals: true,
-    transform: function(doc, ret) {
-      if (ret.ingredientMappings) {
-        ret.ingredientMappings = JSON.parse(JSON.stringify(ret.ingredientMappings));
-      }
-      return ret;
-    }
-  }
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
 });
 
-// Aggiorna updatedAt prima di ogni salvataggio
+// Middleware pre-save per aggiornare updatedAt
 RecipeSchema.pre('save', function(next) {
   this.updatedAt = new Date();
+  next();
+});
+
+// Assicuriamoci che le mappature vengano salvate correttamente
+RecipeSchema.pre('findOneAndUpdate', function(next) {
+  if (this._update.$set && this._update.$set.ingredientMappings) {
+    // Validiamo che sia un oggetto valido
+    if (typeof this._update.$set.ingredientMappings !== 'object') {
+      next(new Error('ingredientMappings must be an object'));
+      return;
+    }
+  }
   next();
 });
 

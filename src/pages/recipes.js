@@ -168,7 +168,12 @@ const RecipeManager = () => {
   };
   const saveMappings = async () => {
     try {
-      console.log('Saving mappings for recipe:', currentRecipe._id);
+      console.log('Starting saveMappings for recipe:', currentRecipe._id);
+      
+      if (!currentRecipe._id) {
+        toast.error('ID ricetta mancante');
+        return;
+      }
       
       // Filtra le associazioni valide rimuovendo quelle vuote
       const validMappings = Object.entries(currentMappings).reduce((acc, [key, value]) => {
@@ -178,11 +183,11 @@ const RecipeManager = () => {
         return acc;
       }, {});
 
-      console.log('Valid mappings to save:', validMappings);
+      console.log('Filtered mappings to save:', validMappings);
 
       // Salva nel database
       const savedMappings = await api.saveRecipeMappings(currentRecipe._id, validMappings);
-      console.log('Saved mappings response:', savedMappings);
+      console.log('Response from save:', savedMappings);
 
       // Aggiorna lo stato locale
       setCurrentMappings(savedMappings);
@@ -193,14 +198,19 @@ const RecipeManager = () => {
         ingredientMappings: savedMappings
       }));
 
+      // Mostra messaggio di successo
       toast.success('Associazioni salvate con successo');
       
       // Ricarica i dati
       await loadInitialData();
       
+      // Chiude il modal dopo il salvataggio
+      setShowFoodCostModal(false);
+      
     } catch (error) {
       console.error('Errore nel salvare le associazioni:', error);
-      toast.error('Errore nel salvare le associazioni');
+      // Mostra messaggio di errore più dettagliato
+      toast.error(`Errore nel salvare le associazioni: ${error.message}`);
     }
   };
 

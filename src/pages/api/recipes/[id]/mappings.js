@@ -7,29 +7,19 @@ export default async function handler(req, res) {
     method,
   } = req;
 
-  console.log('Mappings API called:', { method, id });
+  console.log('Mappings API called:', { method, id, body: req.body });
 
   try {
     await connectToDatabase();
-    console.log('Connected to database');
 
     if (!id) {
-      console.error('No ID provided');
       return res.status(400).json({ error: 'Recipe ID is required' });
-    }
-
-    // Verifica che l'ID sia valido
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      console.error('Invalid ID format');
-      return res.status(400).json({ error: 'Invalid recipe ID format' });
     }
 
     switch (method) {
       case 'GET':
         try {
-          const recipe = await Recipe.findById(id).lean();
-          console.log('Recipe found:', recipe ? 'yes' : 'no');
-          
+          const recipe = await Recipe.findById(id);
           if (!recipe) {
             return res.status(404).json({ error: 'Recipe not found' });
           }
@@ -39,33 +29,37 @@ export default async function handler(req, res) {
           return res.status(200).json(mappings);
         } catch (error) {
           console.error('GET Error:', error);
-          throw error;
+          return res.status(500).json({ error: error.message });
         }
 
       case 'POST':
         try {
           const { mappings } = req.body;
-          console.log('Received mappings:', mappings);
+          console.log('Received mappings to save:', mappings);
 
           if (!mappings || typeof mappings !== 'object') {
             return res.status(400).json({ error: 'Invalid mappings data' });
           }
 
-          const updatedRecipe = await Recipe.findByIdAndUpdate(
-            id,
+          // Utilizziamo findOneAndUpdate per aggiornare le mappature
+          const updatedRecipe = await Recipe.findOneAndUpdate(
+            { _id: id },
             { $set: { ingredientMappings: mappings } },
-            { new: true, runValidators: true }
-          ).lean();
+            { 
+              new: true,         // Ritorna il documento aggiornato
+              runValidators: true // Esegue i validatori
+            }
+          );
 
           if (!updatedRecipe) {
             return res.status(404).json({ error: 'Recipe not found' });
           }
 
-          console.log('Updated mappings:', updatedRecipe.ingredientMappings);
-          return res.status(200).json(updatedRecipe.ingredientMappings || {});
+          console.log('Successfully updated mappings:', updatedRecipe.ingredientMappings);
+          return res.status(200).json(updatedRecipe.ingredientMappings);
         } catch (error) {
           console.error('POST Error:', error);
-          throw error;
+          return res.status(500).json({ error: error.message });
         }
 
       default:
@@ -74,9 +68,6 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal Server Error',
-      details: error.message 
-    });
+    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
