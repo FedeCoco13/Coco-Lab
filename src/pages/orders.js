@@ -46,8 +46,7 @@ export default function OrderManager() {
       loadOrder();
     }
   }, [id]);
-  // Handler semplificati per input mobile
-  const handleChange = (field, value) => {
+  const handleTextInput = (field, value) => {
     setCurrentOrder(prev => ({
       ...prev,
       [field]: value
@@ -56,7 +55,7 @@ export default function OrderManager() {
 
   const handleDepositChange = (value) => {
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
-      handleChange('deposit', value);
+      handleTextInput('deposit', value);
     }
   };
 
@@ -87,7 +86,29 @@ export default function OrderManager() {
     }
   };
 
-  // Componenti di utilità ottimizzati per mobile
+  // Componente TextInput ottimizzato per mobile
+  const TextInput = ({ value, onChange, placeholder = "", required = false, multiline = false }) => {
+    const commonProps = {
+      value,
+      onChange: (e) => onChange(e.target.value),
+      className: `w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white ${multiline ? 'h-32' : ''}`,
+      placeholder,
+      required,
+      autoComplete: "off",
+      style: {
+        WebkitUserSelect: 'text',
+        WebkitAppearance: 'none',
+        MozAppearance: 'textfield'
+      }
+    };
+
+    return multiline ? (
+      <textarea {...commonProps} />
+    ) : (
+      <input type="text" {...commonProps} />
+    );
+  };
+
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
@@ -110,7 +131,6 @@ export default function OrderManager() {
       {children}
     </div>
   );
-
   if (isLoading) {
     return (
       <Layout>
@@ -123,10 +143,10 @@ export default function OrderManager() {
       </Layout>
     );
   }
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
-        {/* Header Responsive */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <Link
             href="/"
@@ -155,9 +175,7 @@ export default function OrderManager() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Vista Mobile Ottimizzata */}
             <div className="block md:hidden">
-              {/* Data e Ora - Mobile */}
               <FormSection title="Data e Ora">
                 <div className="space-y-4">
                   <div>
@@ -166,9 +184,8 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="date"
-                      inputMode="none"
                       value={currentOrder.date}
-                      onChange={(e) => handleChange('date', e.target.value)}
+                      onChange={(e) => handleTextInput('date', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
                       style={{ WebkitUserSelect: 'text' }}
                       required
@@ -183,7 +200,7 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[0]}
                         onChange={(value) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleChange('time', `${value}:${minutes}`);
+                          handleTextInput('time', `${value}:${minutes}`);
                         }}
                         options={Array.from({ length: 13 }, (_, i) => i + 7)}
                       />
@@ -191,7 +208,7 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[1]}
                         onChange={(value) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleChange('time', `${hours}:${value}`);
+                          handleTextInput('time', `${hours}:${value}`);
                         }}
                         options={Array.from({ length: 6 }, (_, i) => i * 10)}
                       />
@@ -200,91 +217,67 @@ export default function OrderManager() {
                 </div>
               </FormSection>
 
-              {/* Descrizione - Mobile */}
               <FormSection title="Dettagli Ordine">
-                <textarea
-                  inputMode="text"
+                <TextInput
                   value={currentOrder.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base bg-white"
-                  style={{ WebkitUserSelect: 'text' }}
-                  required
+                  onChange={(value) => handleTextInput('description', value)}
+                  multiline={true}
+                  required={true}
                 />
               </FormSection>
 
-              {/* Cialda - Mobile */}
               <FormSection title="Dettagli Cialda">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Scritta su Cialda
                     </label>
-                    <input
-                      type="text"
-                      inputMode="text"
+                    <TextInput
                       value={currentOrder.waferText}
-                      onChange={(e) => handleChange('waferText', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
-                      style={{ WebkitUserSelect: 'text' }}
+                      onChange={(value) => handleTextInput('waferText', value)}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Disegno su Cialda
                     </label>
-                    <input
-                      type="text"
-                      inputMode="text"
+                    <TextInput
                       value={currentOrder.waferDesign}
-                      onChange={(e) => handleChange('waferDesign', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
-                      style={{ WebkitUserSelect: 'text' }}
+                      onChange={(value) => handleTextInput('waferDesign', value)}
                     />
                   </div>
                 </div>
               </FormSection>
 
-              {/* Note - Mobile */}
               <FormSection title="Note Aggiuntive">
-                <textarea
-                  inputMode="text"
+                <TextInput
                   value={currentOrder.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base bg-white"
-                  style={{ WebkitUserSelect: 'text' }}
+                  onChange={(value) => handleTextInput('notes', value)}
+                  multiline={true}
                   placeholder="Inserisci eventuali note..."
                 />
               </FormSection>
 
-              {/* Cliente - Mobile */}
               <FormSection title="Informazioni Cliente">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nome Cliente
                     </label>
-                    <input
-                      type="text"
-                      inputMode="text"
+                    <TextInput
                       value={currentOrder.customerName}
-                      onChange={(e) => handleChange('customerName', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
-                      style={{ WebkitUserSelect: 'text' }}
-                      required
+                      onChange={(value) => handleTextInput('customerName', value)}
+                      required={true}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contatto Cliente
                     </label>
-                    <input
-                      type="text"
-                      inputMode="text"
+                    <TextInput
                       value={currentOrder.customerContact}
-                      onChange={(e) => handleChange('customerContact', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
-                      style={{ WebkitUserSelect: 'text' }}
-                      required
+                      onChange={(value) => handleTextInput('customerContact', value)}
+                      required={true}
                     />
                   </div>
                   <div>
@@ -295,12 +288,15 @@ export default function OrderManager() {
                       <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <input
                         type="text"
-                        inputMode="decimal"
                         value={currentOrder.deposit}
                         onChange={(e) => handleDepositChange(e.target.value)}
                         placeholder="0.00"
                         className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
-                        style={{ WebkitUserSelect: 'text' }}
+                        style={{ 
+                          WebkitUserSelect: 'text',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'textfield'
+                        }}
                       />
                     </div>
                   </div>
@@ -320,7 +316,7 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => handleChange('date', e.target.value)}
+                      onChange={(e) => handleTextInput('date', e.target.value)}
                       className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       required
                     />
@@ -338,7 +334,7 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[0]}
                         onChange={(value) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleChange('time', `${value}:${minutes}`);
+                          handleTextInput('time', `${value}:${minutes}`);
                         }}
                         options={Array.from({ length: 13 }, (_, i) => i + 7)}
                       />
@@ -349,7 +345,7 @@ export default function OrderManager() {
                         value={currentOrder.time.split(':')[1]}
                         onChange={(value) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleChange('time', `${hours}:${value}`);
+                          handleTextInput('time', `${hours}:${value}`);
                         }}
                         options={Array.from({ length: 6 }, (_, i) => i * 10)}
                       />
@@ -365,7 +361,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
+                  onChange={(e) => handleTextInput('description', e.target.value)}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
                   required
                 />
@@ -380,7 +376,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferText}
-                    onChange={(e) => handleChange('waferText', e.target.value)}
+                    onChange={(e) => handleTextInput('waferText', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -392,12 +388,11 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferDesign}
-                    onChange={(e) => handleChange('waferDesign', e.target.value)}
+                    onChange={(e) => handleTextInput('waferDesign', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
               </div>
-
               {/* Note - Desktop */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -405,7 +400,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
+                  onChange={(e) => handleTextInput('notes', e.target.value)}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
                 />
               </div>
@@ -419,7 +414,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerName}
-                    onChange={(e) => handleChange('customerName', e.target.value)}
+                    onChange={(e) => handleTextInput('customerName', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -432,7 +427,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerContact}
-                    onChange={(e) => handleChange('customerContact', e.target.value)}
+                    onChange={(e) => handleTextInput('customerContact', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -455,6 +450,7 @@ export default function OrderManager() {
                 </div>
               </div>
             </div>
+
             {/* Pulsanti di azione - Responsive */}
             <div className="flex flex-col md:flex-row justify-end gap-3 mt-6">
               <Link
