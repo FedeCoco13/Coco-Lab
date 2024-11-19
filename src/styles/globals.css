@@ -28,13 +28,28 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Input fixes per mobile */
-input, 
-textarea, 
-select {
-  -webkit-appearance: none;
-  appearance: none;
-  font-size: 16px !important;
+/* Mobile input fixes */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  .mobile-input-fix {
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    width: 100%;
+  }
+  
+  .mobile-input-fix input,
+  .mobile-input-fix textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 /* Fix per lo scroll su mobile */

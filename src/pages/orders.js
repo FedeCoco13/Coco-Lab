@@ -46,7 +46,7 @@ export default function OrderManager() {
       loadOrder();
     }
   }, [id]);
-  // Handler semplificati
+  // Handler semplificati per input mobile
   const handleChange = (field, value) => {
     setCurrentOrder(prev => ({
       ...prev,
@@ -87,12 +87,13 @@ export default function OrderManager() {
     }
   };
 
-  // Componenti di utilità
+  // Componenti di utilità ottimizzati per mobile
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base"
+      style={{ WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' }}
       required
     >
       {options.map(option => (
@@ -154,7 +155,7 @@ export default function OrderManager() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Vista Mobile */}
+            {/* Vista Mobile Ottimizzata */}
             <div className="block md:hidden">
               {/* Data e Ora - Mobile */}
               <FormSection title="Data e Ora">
@@ -165,9 +166,11 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="date"
+                      inputMode="none"
                       value={currentOrder.date}
                       onChange={(e) => handleChange('date', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                      style={{ WebkitUserSelect: 'text' }}
                       required
                     />
                   </div>
@@ -200,9 +203,11 @@ export default function OrderManager() {
               {/* Descrizione - Mobile */}
               <FormSection title="Dettagli Ordine">
                 <textarea
+                  inputMode="text"
                   value={currentOrder.description}
                   onChange={(e) => handleChange('description', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base bg-white"
+                  style={{ WebkitUserSelect: 'text' }}
                   required
                 />
               </FormSection>
@@ -216,9 +221,11 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="text"
+                      inputMode="text"
                       value={currentOrder.waferText}
                       onChange={(e) => handleChange('waferText', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                      style={{ WebkitUserSelect: 'text' }}
                     />
                   </div>
                   <div>
@@ -227,9 +234,11 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="text"
+                      inputMode="text"
                       value={currentOrder.waferDesign}
                       onChange={(e) => handleChange('waferDesign', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                      style={{ WebkitUserSelect: 'text' }}
                     />
                   </div>
                 </div>
@@ -238,9 +247,11 @@ export default function OrderManager() {
               {/* Note - Mobile */}
               <FormSection title="Note Aggiuntive">
                 <textarea
+                  inputMode="text"
                   value={currentOrder.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base bg-white"
+                  style={{ WebkitUserSelect: 'text' }}
                   placeholder="Inserisci eventuali note..."
                 />
               </FormSection>
@@ -254,9 +265,11 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="text"
+                      inputMode="text"
                       value={currentOrder.customerName}
                       onChange={(e) => handleChange('customerName', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                      style={{ WebkitUserSelect: 'text' }}
                       required
                     />
                   </div>
@@ -266,9 +279,11 @@ export default function OrderManager() {
                     </label>
                     <input
                       type="text"
+                      inputMode="text"
                       value={currentOrder.customerContact}
                       onChange={(e) => handleChange('customerContact', e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                      style={{ WebkitUserSelect: 'text' }}
                       required
                     />
                   </div>
@@ -280,10 +295,12 @@ export default function OrderManager() {
                       <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={currentOrder.deposit}
                         onChange={(e) => handleDepositChange(e.target.value)}
                         placeholder="0.00"
-                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base bg-white"
+                        style={{ WebkitUserSelect: 'text' }}
                       />
                     </div>
                   </div>
@@ -438,7 +455,6 @@ export default function OrderManager() {
                 </div>
               </div>
             </div>
-
             {/* Pulsanti di azione - Responsive */}
             <div className="flex flex-col md:flex-row justify-end gap-3 mt-6">
               <Link
