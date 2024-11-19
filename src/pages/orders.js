@@ -46,6 +46,20 @@ export default function OrderManager() {
       loadOrder();
     }
   }, [id]);
+  // Handler semplificati
+  const handleChange = (field, value) => {
+    setCurrentOrder(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleDepositChange = (value) => {
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      handleChange('deposit', value);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -73,27 +87,11 @@ export default function OrderManager() {
     }
   };
 
-  const handleTextChange = (e, field) => {
-    setCurrentOrder(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
-  };
-
-  const handleDepositChange = (e) => {
-    const value = e.target.value;
-    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
-      setCurrentOrder(prev => ({
-        ...prev,
-        deposit: value
-      }));
-    }
-  };
-
+  // Componenti di utilità
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
-      onChange={onChange}
+      onChange={(e) => onChange(e.target.value)}
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base"
       required
     >
@@ -168,7 +166,7 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => handleTextChange(e, 'date')}
+                      onChange={(e) => handleChange('date', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -180,23 +178,17 @@ export default function OrderManager() {
                     <div className="grid grid-cols-2 gap-2">
                       <TimeSelector
                         value={currentOrder.time.split(':')[0]}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleTextChange(
-                            { target: { value: `${e.target.value}:${minutes}` } },
-                            'time'
-                          );
+                          handleChange('time', `${value}:${minutes}`);
                         }}
                         options={Array.from({ length: 13 }, (_, i) => i + 7)}
                       />
                       <TimeSelector
                         value={currentOrder.time.split(':')[1]}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleTextChange(
-                            { target: { value: `${hours}:${e.target.value}` } },
-                            'time'
-                          );
+                          handleChange('time', `${hours}:${value}`);
                         }}
                         options={Array.from({ length: 6 }, (_, i) => i * 10)}
                       />
@@ -209,7 +201,7 @@ export default function OrderManager() {
               <FormSection title="Dettagli Ordine">
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleTextChange(e, 'description')}
+                  onChange={(e) => handleChange('description', e.target.value)}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
                   required
                 />
@@ -225,7 +217,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.waferText}
-                      onChange={(e) => handleTextChange(e, 'waferText')}
+                      onChange={(e) => handleChange('waferText', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
@@ -236,7 +228,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.waferDesign}
-                      onChange={(e) => handleTextChange(e, 'waferDesign')}
+                      onChange={(e) => handleChange('waferDesign', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
@@ -247,7 +239,7 @@ export default function OrderManager() {
               <FormSection title="Note Aggiuntive">
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleTextChange(e, 'notes')}
+                  onChange={(e) => handleChange('notes', e.target.value)}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
                   placeholder="Inserisci eventuali note..."
                 />
@@ -263,7 +255,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.customerName}
-                      onChange={(e) => handleTextChange(e, 'customerName')}
+                      onChange={(e) => handleChange('customerName', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -275,7 +267,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.customerContact}
-                      onChange={(e) => handleTextChange(e, 'customerContact')}
+                      onChange={(e) => handleChange('customerContact', e.target.value)}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -289,7 +281,7 @@ export default function OrderManager() {
                       <input
                         type="text"
                         value={currentOrder.deposit}
-                        onChange={handleDepositChange}
+                        onChange={(e) => handleDepositChange(e.target.value)}
                         placeholder="0.00"
                         className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       />
@@ -311,7 +303,7 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => handleTextChange(e, 'date')}
+                      onChange={(e) => handleChange('date', e.target.value)}
                       className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       required
                     />
@@ -325,45 +317,25 @@ export default function OrderManager() {
                   <div className="flex gap-2 items-center">
                     <div className="relative flex-1">
                       <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                      <select
+                      <TimeSelector
                         value={currentOrder.time.split(':')[0]}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleTextChange(
-                            { target: { value: `${e.target.value}:${minutes}` } },
-                            'time'
-                          );
+                          handleChange('time', `${value}:${minutes}`);
                         }}
-                        className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
-                        required
-                      >
-                        {Array.from({ length: 13 }, (_, i) => i + 7).map(hour => (
-                          <option key={hour} value={hour.toString().padStart(2, '0')}>
-                            {hour.toString().padStart(2, '0')}:00
-                          </option>
-                        ))}
-                      </select>
+                        options={Array.from({ length: 13 }, (_, i) => i + 7)}
+                      />
                     </div>
                     <span className="text-gray-500">:</span>
                     <div className="relative flex-1">
-                      <select
+                      <TimeSelector
                         value={currentOrder.time.split(':')[1]}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleTextChange(
-                            { target: { value: `${hours}:${e.target.value}` } },
-                            'time'
-                          );
+                          handleChange('time', `${hours}:${value}`);
                         }}
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
-                        required
-                      >
-                        {Array.from({ length: 6 }, (_, i) => i * 10).map(minute => (
-                          <option key={minute} value={minute.toString().padStart(2, '0')}>
-                            {minute.toString().padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
+                        options={Array.from({ length: 6 }, (_, i) => i * 10)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -376,7 +348,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleTextChange(e, 'description')}
+                  onChange={(e) => handleChange('description', e.target.value)}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
                   required
                 />
@@ -391,7 +363,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferText}
-                    onChange={(e) => handleTextChange(e, 'waferText')}
+                    onChange={(e) => handleChange('waferText', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -403,7 +375,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferDesign}
-                    onChange={(e) => handleTextChange(e, 'waferDesign')}
+                    onChange={(e) => handleChange('waferDesign', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -416,7 +388,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleTextChange(e, 'notes')}
+                  onChange={(e) => handleChange('notes', e.target.value)}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
                 />
               </div>
@@ -430,7 +402,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerName}
-                    onChange={(e) => handleTextChange(e, 'customerName')}
+                    onChange={(e) => handleChange('customerName', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -443,7 +415,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerContact}
-                    onChange={(e) => handleTextChange(e, 'customerContact')}
+                    onChange={(e) => handleChange('customerContact', e.target.value)}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -458,7 +430,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.deposit}
-                      onChange={handleDepositChange}
+                      onChange={(e) => handleDepositChange(e.target.value)}
                       placeholder="0.00"
                       className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     />
