@@ -210,19 +210,13 @@ export default function OrderManager() {
 
   {/* Descrizione - Mobile */}
   <FormSection title="Dettagli Ordine">
-    <textarea
-      inputMode="text"
-      autoComplete="off"
-      value={currentOrder.description}
-      onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
-      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
-      style={{
-        WebkitAppearance: 'none',
-        WebkitTapHighlightColor: 'transparent',
-        WebkitUserSelect: 'text'
-      }}
-      required
-    />
+  <input
+    type="text"
+    value={currentOrder.customerName}
+    onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+    className="w-full p-3 border rounded-lg"
+    required
+/>
   </FormSection>
 
   {/* Cialda - Mobile */}
