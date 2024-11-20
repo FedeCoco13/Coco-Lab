@@ -7,23 +7,11 @@ import Layout from '../components/Layout';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 
-// Componente di debug
-const DebugInfo = ({ currentOrder }) => {
-  if (process.env.NODE_ENV !== 'development') return null;
-  
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 text-xs z-50">
-      <pre>{JSON.stringify(currentOrder, null, 2)}</pre>
-    </div>
-  );
-};
-
 export default function OrderManager() {
   const router = useRouter();
   const { id } = router.query;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [inputValue, setInputValue] = useState('');
   const [currentOrder, setCurrentOrder] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     time: '07:00',
@@ -37,32 +25,31 @@ export default function OrderManager() {
     printed: false
   });
 
-  // Handler semplificato per gli input
-  const handleInputChange = (e, field) => {
-    console.log('Input change:', { field, value: e.target.value });
-    setInputValue(e.target.value);
-    setCurrentOrder(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
-  };
-
-  // Handler per il deposito
-  const handleDepositChange = (e) => {
-    console.log('Deposit change:', e.target.value);
-    const value = e.target.value;
-    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
-      setCurrentOrder(prev => ({
-        ...prev,
-        deposit: value
-      }));
+  // Carica l'ordine esistente
+  useEffect(() => {
+    if (id) {
+      const loadOrder = async () => {
+        try {
+          setIsLoading(true);
+          const order = await api.getOrders();
+          const foundOrder = order.find(o => o._id === id);
+          if (foundOrder) {
+            setCurrentOrder(foundOrder);
+          }
+        } catch (err) {
+          setError('Errore nel caricamento dell\'ordine');
+          console.error(err);
+          toast.error('Errore nel caricamento dell\'ordine');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadOrder();
     }
-  };
-
-  // Gestore del submit
+  }, [id]);
+  // Handler submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitting...');
     setError('');
     setIsLoading(true);
   
@@ -88,39 +75,22 @@ export default function OrderManager() {
     }
   };
 
-  useEffect(() => {
-    if (id) {
-      const loadOrder = async () => {
-        try {
-          setIsLoading(true);
-          const order = await api.getOrders();
-          const foundOrder = order.find(o => o._id === id);
-          if (foundOrder) {
-            setCurrentOrder(foundOrder);
-          }
-        } catch (err) {
-          setError('Errore nel caricamento dell\'ordine');
-          console.error(err);
-          toast.error('Errore nel caricamento dell\'ordine');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadOrder();
+  // Handler deposito semplificato
+  const handleDepositChange = (value) => {
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setCurrentOrder(prev => ({
+        ...prev,
+        deposit: value
+      }));
     }
-  }, [id]);
-  // Componenti di utilità ottimizzati per mobile
+  };
+
+  // Utility components
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="mobile-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base"
-      style={{
-        WebkitAppearance: 'none',
-        MozAppearance: 'none',
-        appearance: 'none',
-        fontSize: '16px'
-      }}
+      onChange={onChange}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base"
       required
     >
       {options.map(option => (
@@ -138,56 +108,6 @@ export default function OrderManager() {
     </div>
   );
 
-  // Input mobile ottimizzato
-  const MobileInput = ({ 
-    type = "text", 
-    value, 
-    onChange, 
-    placeholder, 
-    required = false,
-    className = "",
-    inputMode = "text"
-  }) => (
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      inputMode={inputMode}
-      className={`mobile-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base ${className}`}
-      style={{
-        fontSize: '16px',
-        WebkitAppearance: 'none',
-        WebkitTapHighlightColor: 'transparent'
-      }}
-    />
-  );
-
-  // Mobile Textarea
-  const MobileTextarea = ({ 
-    value, 
-    onChange, 
-    placeholder, 
-    required = false,
-    className = "",
-    rows = 4
-  }) => (
-    <textarea
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      rows={rows}
-      className={`mobile-input w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base ${className}`}
-      style={{
-        fontSize: '16px',
-        WebkitAppearance: 'none',
-        WebkitTapHighlightColor: 'transparent'
-      }}
-    />
-  );
-
   if (isLoading) {
     return (
       <Layout>
@@ -203,9 +123,6 @@ export default function OrderManager() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
-        {/* Debug Info in Development */}
-        <DebugInfo currentOrder={currentOrder} />
-        
         {/* Header Responsive */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <Link
@@ -234,8 +151,8 @@ export default function OrderManager() {
             {id ? 'Modifica Ordine' : 'Nuovo Ordine'}
           </h1>
 
-          <form onSubmit={handleSubmit} className="mobile-form space-y-4 md:space-y-6">
-            {/* Vista Mobile Ottimizzata */}
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+            {/* Vista Mobile */}
             <div className="block md:hidden">
               {/* Data e Ora - Mobile */}
               <FormSection title="Data e Ora">
@@ -244,12 +161,12 @@ export default function OrderManager() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Data
                     </label>
-                    <MobileInput
+                    <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => handleInputChange(e, 'date')}
-                      required={true}
-                      inputMode="none"
+                      onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      required
                     />
                   </div>
                   <div>
@@ -259,23 +176,23 @@ export default function OrderManager() {
                     <div className="grid grid-cols-2 gap-2">
                       <TimeSelector
                         value={currentOrder.time.split(':')[0]}
-                        onChange={(value) => {
+                        onChange={(e) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleInputChange(
-                            { target: { value: `${value}:${minutes}` } },
-                            'time'
-                          );
+                          setCurrentOrder({
+                            ...currentOrder,
+                            time: `${e.target.value}:${minutes}`
+                          });
                         }}
                         options={Array.from({ length: 13 }, (_, i) => i + 7)}
                       />
                       <TimeSelector
                         value={currentOrder.time.split(':')[1]}
-                        onChange={(value) => {
+                        onChange={(e) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleInputChange(
-                            { target: { value: `${hours}:${value}` } },
-                            'time'
-                          );
+                          setCurrentOrder({
+                            ...currentOrder,
+                            time: `${hours}:${e.target.value}`
+                          });
                         }}
                         options={Array.from({ length: 6 }, (_, i) => i * 10)}
                       />
@@ -286,12 +203,11 @@ export default function OrderManager() {
 
               {/* Descrizione - Mobile */}
               <FormSection title="Dettagli Ordine">
-                <MobileTextarea
+                <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleInputChange(e, 'description')}
-                  placeholder="Inserisci la descrizione dell'ordine"
-                  required={true}
-                  className="h-32"
+                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+                  required
                 />
               </FormSection>
 
@@ -302,20 +218,22 @@ export default function OrderManager() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Scritta su Cialda
                     </label>
-                    <MobileInput
+                    <input
+                      type="text"
                       value={currentOrder.waferText}
-                      onChange={(e) => handleInputChange(e, 'waferText')}
-                      placeholder="Inserisci il testo per la cialda"
+                      onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Disegno su Cialda
                     </label>
-                    <MobileInput
+                    <input
+                      type="text"
                       value={currentOrder.waferDesign}
-                      onChange={(e) => handleInputChange(e, 'waferDesign')}
-                      placeholder="Descrivi il disegno per la cialda"
+                      onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
                 </div>
@@ -323,11 +241,11 @@ export default function OrderManager() {
 
               {/* Note - Mobile */}
               <FormSection title="Note Aggiuntive">
-                <MobileTextarea
+                <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleInputChange(e, 'notes')}
+                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
                   placeholder="Inserisci eventuali note..."
-                  className="h-24"
                 />
               </FormSection>
 
@@ -338,22 +256,24 @@ export default function OrderManager() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nome Cliente
                     </label>
-                    <MobileInput
+                    <input
+                      type="text"
                       value={currentOrder.customerName}
-                      onChange={(e) => handleInputChange(e, 'customerName')}
-                      placeholder="Nome del cliente"
-                      required={true}
+                      onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contatto Cliente
                     </label>
-                    <MobileInput
+                    <input
+                      type="text"
                       value={currentOrder.customerContact}
-                      onChange={(e) => handleInputChange(e, 'customerContact')}
-                      placeholder="Contatto del cliente"
-                      required={true}
+                      onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+                      required
                     />
                   </div>
                   <div>
@@ -362,12 +282,12 @@ export default function OrderManager() {
                     </label>
                     <div className="relative">
                       <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                      <MobileInput
+                      <input
+                        type="text"
                         value={currentOrder.deposit}
-                        onChange={(e) => handleDepositChange(e)}
+                        onChange={(e) => handleDepositChange(e.target.value)}
                         placeholder="0.00"
-                        inputMode="decimal"
-                        className="pl-10"
+                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       />
                     </div>
                   </div>
@@ -387,7 +307,7 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => handleInputChange(e, 'date')}
+                      onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
                       className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       required
                     />
@@ -403,12 +323,12 @@ export default function OrderManager() {
                       <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <TimeSelector
                         value={currentOrder.time.split(':')[0]}
-                        onChange={(value) => {
+                        onChange={(e) => {
                           const minutes = currentOrder.time.split(':')[1];
-                          handleInputChange(
-                            { target: { value: `${value}:${minutes}` } },
-                            'time'
-                          );
+                          setCurrentOrder({
+                            ...currentOrder,
+                            time: `${e.target.value}:${minutes}`
+                          });
                         }}
                         options={Array.from({ length: 13 }, (_, i) => i + 7)}
                       />
@@ -417,12 +337,12 @@ export default function OrderManager() {
                     <div className="relative flex-1">
                       <TimeSelector
                         value={currentOrder.time.split(':')[1]}
-                        onChange={(value) => {
+                        onChange={(e) => {
                           const hours = currentOrder.time.split(':')[0];
-                          handleInputChange(
-                            { target: { value: `${hours}:${value}` } },
-                            'time'
-                          );
+                          setCurrentOrder({
+                            ...currentOrder,
+                            time: `${hours}:${e.target.value}`
+                          });
                         }}
                         options={Array.from({ length: 6 }, (_, i) => i * 10)}
                       />
@@ -438,7 +358,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleInputChange(e, 'description')}
+                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
                   required
                 />
@@ -453,7 +373,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferText}
-                    onChange={(e) => handleInputChange(e, 'waferText')}
+                    onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -465,7 +385,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.waferDesign}
-                    onChange={(e) => handleInputChange(e, 'waferDesign')}
+                    onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
@@ -478,7 +398,7 @@ export default function OrderManager() {
                 </label>
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleInputChange(e, 'notes')}
+                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
                 />
               </div>
@@ -492,7 +412,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerName}
-                    onChange={(e) => handleInputChange(e, 'customerName')}
+                    onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -505,7 +425,7 @@ export default function OrderManager() {
                   <input
                     type="text"
                     value={currentOrder.customerContact}
-                    onChange={(e) => handleInputChange(e, 'customerContact')}
+                    onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
@@ -520,7 +440,7 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.deposit}
-                      onChange={(e) => handleDepositChange(e)}
+                      onChange={(e) => handleDepositChange(e.target.value)}
                       placeholder="0.00"
                       className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     />
@@ -528,6 +448,7 @@ export default function OrderManager() {
                 </div>
               </div>
             </div>
+
             {/* Pulsanti di azione - Responsive */}
             <div className="flex flex-col md:flex-row justify-end gap-3 mt-6">
               <Link
