@@ -26,6 +26,20 @@ export default function OrderManager() {
   });
 
   useEffect(() => {
+    // Aggiunge stile CSS per prevenire il blur su mobile
+    const style = document.createElement('style');
+    style.textContent = `
+      input, textarea {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
+  useEffect(() => {
     if (id) {
       const loadOrder = async () => {
         try {
@@ -81,6 +95,19 @@ export default function OrderManager() {
         deposit: value
       }));
     }
+  };
+
+  const handleFocus = (e) => {
+    e.preventDefault();
+    e.target.focus();
+  };
+
+  const handleChange = (e, field) => {
+    e.preventDefault();
+    setCurrentOrder(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
   };
 
   const TimeSelector = ({ value, onChange, options }) => (
@@ -142,7 +169,6 @@ export default function OrderManager() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Vista Mobile */}
             <div className="block md:hidden">
               <FormSection title="Data e Ora">
                 <div className="space-y-4">
@@ -151,7 +177,8 @@ export default function OrderManager() {
                     <input
                       type="date"
                       value={currentOrder.date}
-                      onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
+                      onChange={(e) => handleChange(e, 'date')}
+                      onFocus={handleFocus}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -183,7 +210,8 @@ export default function OrderManager() {
               <FormSection title="Dettagli Ordine">
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+                  onChange={(e) => handleChange(e, 'description')}
+                  onFocus={handleFocus}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
                   required
                 />
@@ -196,7 +224,8 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.waferText}
-                      onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
+                      onChange={(e) => handleChange(e, 'waferText')}
+                      onFocus={handleFocus}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
@@ -205,7 +234,8 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.waferDesign}
-                      onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
+                      onChange={(e) => handleChange(e, 'waferDesign')}
+                      onFocus={handleFocus}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                     />
                   </div>
@@ -215,7 +245,8 @@ export default function OrderManager() {
               <FormSection title="Note Aggiuntive">
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
+                  onChange={(e) => handleChange(e, 'notes')}
+                  onFocus={handleFocus}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
                 />
               </FormSection>
@@ -227,7 +258,8 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.customerName}
-                      onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+                      onChange={(e) => handleChange(e, 'customerName')}
+                      onFocus={handleFocus}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -237,7 +269,8 @@ export default function OrderManager() {
                     <input
                       type="text"
                       value={currentOrder.customerContact}
-                      onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+                      onChange={(e) => handleChange(e, 'customerContact')}
+                      onFocus={handleFocus}
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       required
                     />
@@ -250,6 +283,7 @@ export default function OrderManager() {
                         type="text"
                         value={currentOrder.deposit}
                         onChange={(e) => handleDepositChange(e.target.value)}
+                        onFocus={handleFocus}
                         placeholder="0.00"
                         className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
                       />
@@ -268,7 +302,7 @@ export default function OrderManager() {
         <input
           type="date"
           value={currentOrder.date}
-          onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
+          onChange={(e) => handleChange(e, 'date')}
           className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
           required
         />
@@ -308,7 +342,7 @@ export default function OrderManager() {
     <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione Ordine</label>
     <textarea
       value={currentOrder.description}
-      onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+      onChange={(e) => handleChange(e, 'description')}
       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
       required
     />
@@ -320,7 +354,7 @@ export default function OrderManager() {
       <input
         type="text"
         value={currentOrder.waferText}
-        onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
+        onChange={(e) => handleChange(e, 'waferText')}
         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
       />
     </div>
@@ -330,7 +364,7 @@ export default function OrderManager() {
       <input
         type="text"
         value={currentOrder.waferDesign}
-        onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
+        onChange={(e) => handleChange(e, 'waferDesign')}
         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
       />
     </div>
@@ -340,7 +374,7 @@ export default function OrderManager() {
     <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
     <textarea
       value={currentOrder.notes}
-      onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
+      onChange={(e) => handleChange(e, 'notes')}
       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
     />
   </div>
@@ -351,7 +385,7 @@ export default function OrderManager() {
       <input
         type="text"
         value={currentOrder.customerName}
-        onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+        onChange={(e) => handleChange(e, 'customerName')}
         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
         required
       />
@@ -362,7 +396,7 @@ export default function OrderManager() {
       <input
         type="text"
         value={currentOrder.customerContact}
-        onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+        onChange={(e) => handleChange(e, 'customerContact')}
         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
         required
       />
