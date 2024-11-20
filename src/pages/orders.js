@@ -25,7 +25,6 @@ export default function OrderManager() {
     printed: false
   });
 
-  // Carica l'ordine esistente
   useEffect(() => {
     if (id) {
       const loadOrder = async () => {
@@ -47,7 +46,7 @@ export default function OrderManager() {
       loadOrder();
     }
   }, [id]);
-  // Handler submit
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -75,7 +74,6 @@ export default function OrderManager() {
     }
   };
 
-  // Handler deposito semplificato
   const handleDepositChange = (value) => {
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
       setCurrentOrder(prev => ({
@@ -84,8 +82,6 @@ export default function OrderManager() {
       }));
     }
   };
-
-  // Utility components
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
@@ -165,14 +161,11 @@ export default function OrderManager() {
           type="date"
           inputMode="none"
           autoComplete="off"
+          autocapitalize="none"
+          spellcheck="false"
           value={currentOrder.date}
           onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-          style={{
-            WebkitAppearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitUserSelect: 'text'
-          }}
           required
         />
       </div>
@@ -207,16 +200,18 @@ export default function OrderManager() {
       </div>
     </div>
   </FormSection>
-
   {/* Descrizione - Mobile */}
   <FormSection title="Dettagli Ordine">
-  <input
-    type="text"
-    value={currentOrder.customerName}
-    onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-    className="w-full p-3 border rounded-lg"
-    required
-/>
+    <textarea
+      inputMode="text"
+      autoComplete="off"
+      autocapitalize="none" 
+      spellcheck="false"
+      value={currentOrder.description}
+      onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+      required
+    />
   </FormSection>
 
   {/* Cialda - Mobile */}
@@ -230,14 +225,11 @@ export default function OrderManager() {
           type="text"
           inputMode="text"
           autoComplete="off"
+          autocapitalize="none"
+          spellcheck="false"
           value={currentOrder.waferText}
           onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-          style={{
-            WebkitAppearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitUserSelect: 'text'
-          }}
         />
       </div>
       <div>
@@ -248,14 +240,11 @@ export default function OrderManager() {
           type="text"
           inputMode="text"
           autoComplete="off"
+          autocapitalize="none"
+          spellcheck="false"
           value={currentOrder.waferDesign}
           onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-          style={{
-            WebkitAppearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitUserSelect: 'text'
-          }}
         />
       </div>
     </div>
@@ -266,14 +255,11 @@ export default function OrderManager() {
     <textarea
       inputMode="text"
       autoComplete="off"
+      autocapitalize="none"
+      spellcheck="false"
       value={currentOrder.notes}
       onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
-      style={{
-        WebkitAppearance: 'none',
-        WebkitTapHighlightColor: 'transparent',
-        WebkitUserSelect: 'text'
-      }}
     />
   </FormSection>
 
@@ -288,14 +274,11 @@ export default function OrderManager() {
           type="text"
           inputMode="text"
           autoComplete="off"
+          autocapitalize="none"
+          spellcheck="false"
           value={currentOrder.customerName}
           onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-          style={{
-            WebkitAppearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitUserSelect: 'text'
-          }}
           required
         />
       </div>
@@ -307,14 +290,11 @@ export default function OrderManager() {
           type="text"
           inputMode="text"
           autoComplete="off"
+          autocapitalize="none"
+          spellcheck="false"
           value={currentOrder.customerContact}
           onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-          style={{
-            WebkitAppearance: 'none',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitUserSelect: 'text'
-          }}
           required
         />
       </div>
@@ -328,23 +308,20 @@ export default function OrderManager() {
             type="text"
             inputMode="decimal"
             autoComplete="off"
+            autocapitalize="none"
+            spellcheck="false"
             value={currentOrder.deposit}
             onChange={(e) => handleDepositChange(e.target.value)}
             placeholder="0.00"
             className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-            style={{
-              WebkitAppearance: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              WebkitUserSelect: 'text'
-            }}
           />
         </div>
       </div>
     </div>
   </FormSection>
 </div>
-            {/* Layout Desktop */}
-            <div className="hidden md:block bg-white rounded-lg shadow-lg p-6">
+{/* Layout Desktop */}
+<div className="hidden md:block bg-white rounded-lg shadow-lg p-6">
               {/* Data e Ora - Desktop */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
@@ -429,7 +406,7 @@ export default function OrderManager() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Disegno su Cialda
+                    Disegno su Cialda  
                   </label>
                   <input
                     type="text"
