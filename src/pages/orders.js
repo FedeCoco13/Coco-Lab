@@ -153,211 +153,202 @@ export default function OrderManager() {
 
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             {/* Vista Mobile */}
-            <div className="block md:hidden">
-              {/* Data e Ora - Mobile */}
-              <FormSection title="Data e Ora">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Data
-                    </label>
-                    <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ora
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <TimeSelector
-                        value={currentOrder.time.split(':')[0]}
-                        onChange={(e) => {
-                          const minutes = currentOrder.time.split(':')[1];
-                          setCurrentOrder({
-                            ...currentOrder,
-                            time: `${e.target.value}:${minutes}`
-                          });
-                        }}
-                        options={Array.from({ length: 13 }, (_, i) => i + 7)}
-                      />
-                      <TimeSelector
-                        value={currentOrder.time.split(':')[1]}
-                        onChange={(e) => {
-                          const hours = currentOrder.time.split(':')[0];
-                          setCurrentOrder({
-                            ...currentOrder,
-                            time: `${hours}:${e.target.value}`
-                          });
-                        }}
-                        options={Array.from({ length: 6 }, (_, i) => i * 10)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </FormSection>
+<div className="block md:hidden">
+  {/* Data e Ora - Mobile */}
+  <FormSection title="Data e Ora">
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Data
+        </label>
+        <input
+          type="date"
+          inputMode="none"
+          autoComplete="off"
+          value={currentOrder.date}
+          onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+          style={{
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'text'
+          }}
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Ora
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <TimeSelector
+            value={currentOrder.time.split(':')[0]}
+            onChange={(e) => {
+              const minutes = currentOrder.time.split(':')[1];
+              setCurrentOrder({
+                ...currentOrder,
+                time: `${e.target.value}:${minutes}`
+              });
+            }}
+            options={Array.from({ length: 13 }, (_, i) => i + 7)}
+          />
+          <TimeSelector
+            value={currentOrder.time.split(':')[1]}
+            onChange={(e) => {
+              const hours = currentOrder.time.split(':')[0];
+              setCurrentOrder({
+                ...currentOrder,
+                time: `${hours}:${e.target.value}`
+              });
+            }}
+            options={Array.from({ length: 6 }, (_, i) => i * 10)}
+          />
+        </div>
+      </div>
+    </div>
+  </FormSection>
 
-              {/* Descrizione - Mobile */}
-              <FormSection title="Dettagli Ordine">
-              <textarea
-  inputMode="text"
-  autoComplete="off"
-  value={currentOrder.description}
-  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-              </FormSection>
+  {/* Descrizione - Mobile */}
+  <FormSection title="Dettagli Ordine">
+    <textarea
+      inputMode="text"
+      autoComplete="off"
+      value={currentOrder.description}
+      onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+      style={{
+        WebkitAppearance: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        WebkitUserSelect: 'text'
+      }}
+      required
+    />
+  </FormSection>
 
-              {/* Cialda - Mobile */}
-              <FormSection title="Dettagli Cialda">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Scritta su Cialda
-                    </label>
-                    <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Disegno su Cialda
-                    </label>
-                    <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                  </div>
-                </div>
-              </FormSection>
+  {/* Cialda - Mobile */}
+  <FormSection title="Dettagli Cialda">
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Scritta su Cialda
+        </label>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          value={currentOrder.waferText}
+          onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+          style={{
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'text'
+          }}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Disegno su Cialda
+        </label>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          value={currentOrder.waferDesign}
+          onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+          style={{
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'text'
+          }}
+        />
+      </div>
+    </div>
+  </FormSection>
 
-              {/* Note - Mobile */}
-              <FormSection title="Note Aggiuntive">
-              <textarea
-  inputMode="text"
-  autoComplete="off"
-  value={currentOrder.description}
-  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-              </FormSection>
+  {/* Note - Mobile */}
+  <FormSection title="Note Aggiuntive">
+    <textarea
+      inputMode="text"
+      autoComplete="off"
+      value={currentOrder.notes}
+      onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
+      style={{
+        WebkitAppearance: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        WebkitUserSelect: 'text'
+      }}
+    />
+  </FormSection>
 
-              {/* Cliente - Mobile */}
-              <FormSection title="Informazioni Cliente">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nome Cliente
-                    </label>
-                    <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contatto Cliente
-                    </label>
-                    <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Acconto €
-                    </label>
-                    <div className="relative">
-                      <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                      <input
-  type="text"
-  inputMode="text"
-  autoComplete="off"
-  enterKeyHint="next"
-  value={currentOrder.customerName}
-  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-  style={{
-    WebkitAppearance: 'none',
-    WebkitTapHighlightColor: 'transparent',
-    WebkitUserSelect: 'text'
-  }}
-  required
-/>
-                    </div>
-                  </div>
-                </div>
-              </FormSection>
-            </div>
+  {/* Cliente - Mobile */}
+  <FormSection title="Informazioni Cliente">
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Nome Cliente
+        </label>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          value={currentOrder.customerName}
+          onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+          style={{
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'text'
+          }}
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Contatto Cliente
+        </label>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          value={currentOrder.customerContact}
+          onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+          style={{
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            WebkitUserSelect: 'text'
+          }}
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Acconto €
+        </label>
+        <div className="relative">
+          <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            value={currentOrder.deposit}
+            onChange={(e) => handleDepositChange(e.target.value)}
+            placeholder="0.00"
+            className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+            style={{
+              WebkitAppearance: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              WebkitUserSelect: 'text'
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  </FormSection>
+</div>
             {/* Layout Desktop */}
             <div className="hidden md:block bg-white rounded-lg shadow-lg p-6">
               {/* Data e Ora - Desktop */}
