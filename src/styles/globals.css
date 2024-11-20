@@ -14,49 +14,38 @@
   }
 }
 
-html, body {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
-/* Mobile input fixes */
-@media screen and (max-width: 768px) {
-  input,
-  textarea,
-  select {
+/* Fix per input mobile */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  textarea {
     font-size: 16px !important;
+    transform: scale(1);
+    -webkit-transform: scale(1);
+  }
+
+  .mobile-input {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-  }
-
-  .mobile-input-fix {
-    min-height: 100%;
-    min-height: -webkit-fill-available;
-    width: 100%;
-  }
-  
-  .mobile-input-fix input,
-  .mobile-input-fix textarea {
+    -webkit-tap-highlight-color: transparent;
     -webkit-user-select: text;
     user-select: text;
   }
-}
 
-/* Fix per lo scroll su mobile */
-@media screen and (max-width: 768px) {
+  .mobile-form {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .table-container {
     -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
   }
   
   .sticky-header {
@@ -64,23 +53,9 @@ body {
     left: 0;
     z-index: 20;
   }
-
-  /* Migliora la gestione degli input su mobile */
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-    max-height: 90vh; /* Previene overflow su iOS */
-  }
-
-  /* Previene il bounce sul body */
-  body {
-    overscroll-behavior-y: none;
-  }
 }
 
-/* Classe di utilità per lo scroll fluido */
-.smooth-scroll {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+/* Stili per debug visivo */
+.debug-focus {
+  outline: 2px solid red !important;
 }
