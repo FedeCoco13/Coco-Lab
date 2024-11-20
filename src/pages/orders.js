@@ -162,12 +162,20 @@ export default function OrderManager() {
                       Data
                     </label>
                     <input
-                      type="date"
-                      value={currentOrder.date}
-                      onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -203,12 +211,19 @@ export default function OrderManager() {
 
               {/* Descrizione - Mobile */}
               <FormSection title="Dettagli Ordine">
-                <textarea
-                  value={currentOrder.description}
-                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
-                  required
-                />
+              <textarea
+  inputMode="text"
+  autoComplete="off"
+  value={currentOrder.description}
+  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
               </FormSection>
 
               {/* Cialda - Mobile */}
@@ -219,34 +234,59 @@ export default function OrderManager() {
                       Scritta su Cialda
                     </label>
                     <input
-                      type="text"
-                      value={currentOrder.waferText}
-                      onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                    />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Disegno su Cialda
                     </label>
                     <input
-                      type="text"
-                      value={currentOrder.waferDesign}
-                      onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                    />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                   </div>
                 </div>
               </FormSection>
 
               {/* Note - Mobile */}
               <FormSection title="Note Aggiuntive">
-                <textarea
-                  value={currentOrder.notes}
-                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
-                  placeholder="Inserisci eventuali note..."
-                />
+              <textarea
+  inputMode="text"
+  autoComplete="off"
+  value={currentOrder.description}
+  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
               </FormSection>
 
               {/* Cliente - Mobile */}
@@ -257,24 +297,40 @@ export default function OrderManager() {
                       Nome Cliente
                     </label>
                     <input
-                      type="text"
-                      value={currentOrder.customerName}
-                      onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contatto Cliente
                     </label>
                     <input
-                      type="text"
-                      value={currentOrder.customerContact}
-                      onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -283,12 +339,20 @@ export default function OrderManager() {
                     <div className="relative">
                       <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <input
-                        type="text"
-                        value={currentOrder.deposit}
-                        onChange={(e) => handleDepositChange(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      />
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  enterKeyHint="next"
+  value={currentOrder.customerName}
+  onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
+  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+  style={{
+    WebkitAppearance: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'text'
+  }}
+  required
+/>
                     </div>
                   </div>
                 </div>
