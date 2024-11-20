@@ -26,17 +26,25 @@ export default function OrderManager() {
   });
 
   useEffect(() => {
-    // Aggiunge stile CSS per prevenire il blur su mobile
-    const style = document.createElement('style');
-    style.textContent = `
-      input, textarea {
-        -webkit-user-select: text !important;
-        user-select: text !important;
-        -webkit-tap-highlight-color: transparent !important;
+    // Fix per la gestione del viewport su mobile
+    const viewport = document.querySelector('meta[name=viewport]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0');
+    }
+    
+    const handleInput = () => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    };
+
+    document.addEventListener('focusin', handleInput);
+    
+    return () => {
+      document.removeEventListener('focusin', handleInput);
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    };
   }, []);
 
   useEffect(() => {
@@ -97,24 +105,23 @@ export default function OrderManager() {
     }
   };
 
-  const handleFocus = (e) => {
-    e.preventDefault();
-    e.target.focus();
-  };
-
-  const handleChange = (e, field) => {
-    e.preventDefault();
-    setCurrentOrder(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
-  };
+  const renderInput = (value, onChange, type = "text", required = false) => (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
+      style={{ WebkitAppearance: 'none' }}
+      required={required}
+    />
+  );
 
   const TimeSelector = ({ value, onChange, options }) => (
     <select
       value={value}
       onChange={onChange}
       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] bg-white text-base"
+      style={{ WebkitAppearance: 'none' }}
       required
     >
       {options.map(option => (
@@ -174,14 +181,12 @@ export default function OrderManager() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
-                    <input
-                      type="date"
-                      value={currentOrder.date}
-                      onChange={(e) => handleChange(e, 'date')}
-                      onFocus={handleFocus}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+                    {renderInput(
+                      currentOrder.date,
+                      (e) => setCurrentOrder({...currentOrder, date: e.target.value}),
+                      "date",
+                      true
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Ora</label>
@@ -210,9 +215,9 @@ export default function OrderManager() {
               <FormSection title="Dettagli Ordine">
                 <textarea
                   value={currentOrder.description}
-                  onChange={(e) => handleChange(e, 'description')}
-                  onFocus={handleFocus}
+                  onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-32 text-base"
+                  style={{ WebkitAppearance: 'none' }}
                   required
                 />
               </FormSection>
@@ -221,23 +226,17 @@ export default function OrderManager() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Scritta su Cialda</label>
-                    <input
-                      type="text"
-                      value={currentOrder.waferText}
-                      onChange={(e) => handleChange(e, 'waferText')}
-                      onFocus={handleFocus}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                    />
+                    {renderInput(
+                      currentOrder.waferText,
+                      (e) => setCurrentOrder({...currentOrder, waferText: e.target.value})
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Disegno su Cialda</label>
-                    <input
-                      type="text"
-                      value={currentOrder.waferDesign}
-                      onChange={(e) => handleChange(e, 'waferDesign')}
-                      onFocus={handleFocus}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                    />
+                    {renderInput(
+                      currentOrder.waferDesign,
+                      (e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})
+                    )}
                   </div>
                 </div>
               </FormSection>
@@ -245,9 +244,9 @@ export default function OrderManager() {
               <FormSection title="Note Aggiuntive">
                 <textarea
                   value={currentOrder.notes}
-                  onChange={(e) => handleChange(e, 'notes')}
-                  onFocus={handleFocus}
+                  onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24 text-base"
+                  style={{ WebkitAppearance: 'none' }}
                 />
               </FormSection>
 
@@ -255,38 +254,30 @@ export default function OrderManager() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome Cliente</label>
-                    <input
-                      type="text"
-                      value={currentOrder.customerName}
-                      onChange={(e) => handleChange(e, 'customerName')}
-                      onFocus={handleFocus}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+                    {renderInput(
+                      currentOrder.customerName,
+                      (e) => setCurrentOrder({...currentOrder, customerName: e.target.value}),
+                      "text",
+                      true
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Contatto Cliente</label>
-                    <input
-                      type="text"
-                      value={currentOrder.customerContact}
-                      onChange={(e) => handleChange(e, 'customerContact')}
-                      onFocus={handleFocus}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      required
-                    />
+                    {renderInput(
+                      currentOrder.customerContact,
+                      (e) => setCurrentOrder({...currentOrder, customerContact: e.target.value}),
+                      "text",
+                      true
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Acconto €</label>
                     <div className="relative">
                       <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                      <input
-                        type="text"
-                        value={currentOrder.deposit}
-                        onChange={(e) => handleDepositChange(e.target.value)}
-                        onFocus={handleFocus}
-                        placeholder="0.00"
-                        className="w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513] text-base"
-                      />
+                      {renderInput(
+                        currentOrder.deposit,
+                        (e) => handleDepositChange(e.target.value)
+                      )}
                     </div>
                   </div>
                 </div>
@@ -299,13 +290,12 @@ export default function OrderManager() {
       <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
       <div className="relative">
         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        <input
-          type="date"
-          value={currentOrder.date}
-          onChange={(e) => handleChange(e, 'date')}
-          className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-          required
-        />
+        {renderInput(
+          currentOrder.date,
+          (e) => setCurrentOrder({...currentOrder, date: e.target.value}),
+          "date",
+          true
+        )}
       </div>
     </div>
 
@@ -342,8 +332,9 @@ export default function OrderManager() {
     <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione Ordine</label>
     <textarea
       value={currentOrder.description}
-      onChange={(e) => handleChange(e, 'description')}
+      onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
+      style={{ WebkitAppearance: 'none' }}
       required
     />
   </div>
@@ -351,22 +342,18 @@ export default function OrderManager() {
   <div className="grid grid-cols-2 gap-4 mb-6">
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Scritta su Cialda</label>
-      <input
-        type="text"
-        value={currentOrder.waferText}
-        onChange={(e) => handleChange(e, 'waferText')}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-      />
+      {renderInput(
+        currentOrder.waferText,
+        (e) => setCurrentOrder({...currentOrder, waferText: e.target.value})
+      )}
     </div>
 
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Disegno su Cialda</label>
-      <input
-        type="text"
-        value={currentOrder.waferDesign}
-        onChange={(e) => handleChange(e, 'waferDesign')}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-      />
+      {renderInput(
+        currentOrder.waferDesign,
+        (e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})
+      )}
     </div>
   </div>
 
@@ -374,45 +361,40 @@ export default function OrderManager() {
     <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
     <textarea
       value={currentOrder.notes}
-      onChange={(e) => handleChange(e, 'notes')}
+      onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
       className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
+      style={{ WebkitAppearance: 'none' }}
     />
   </div>
-
   <div className="grid grid-cols-3 gap-4 mb-6">
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Nome Cliente</label>
-      <input
-        type="text"
-        value={currentOrder.customerName}
-        onChange={(e) => handleChange(e, 'customerName')}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-        required
-      />
+      {renderInput(
+        currentOrder.customerName,
+        (e) => setCurrentOrder({...currentOrder, customerName: e.target.value}),
+        "text",
+        true
+      )}
     </div>
 
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Contatto Cliente</label>
-      <input
-        type="text"
-        value={currentOrder.customerContact}
-        onChange={(e) => handleChange(e, 'customerContact')}
-        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-        required
-      />
+      {renderInput(
+        currentOrder.customerContact,
+        (e) => setCurrentOrder({...currentOrder, customerContact: e.target.value}),
+        "text",
+        true
+      )}
     </div>
 
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Acconto €</label>
       <div className="relative">
         <EuroIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        <input
-          type="text"
-          value={currentOrder.deposit}
-          onChange={(e) => handleDepositChange(e.target.value)}
-          placeholder="0.00"
-          className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
-        />
+        {renderInput(
+          currentOrder.deposit,
+          (e) => handleDepositChange(e.target.value)
+        )}
       </div>
     </div>
   </div>
