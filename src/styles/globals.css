@@ -20,28 +20,33 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Fix per input mobile */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   input[type="text"],
   input[type="number"],
   textarea {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
     font-size: 16px !important;
-    transform: scale(1);
-    -webkit-transform: scale(1);
   }
 
-  .mobile-input {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-user-select: text;
-    user-select: text;
+  /* Fix specifico per Chrome Android */
+  input, textarea {
+    font-size: 16px !important;
+    max-height: none !important;
+    line-height: normal !important;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
   }
 
+  /* Previeni il bounce della pagina su Android */
   .mobile-form {
-    overflow-x: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
     -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    height: 100%;
   }
 
   .table-container {
