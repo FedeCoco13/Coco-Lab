@@ -331,11 +331,10 @@ export default function OrderManager() {
                     </div>
                     <div className="w-24">
                       <input
-                        type="number"
+                        type="text"
                         value={item.quantity}
                         onChange={(e) => updateSavoryItem(index, 'quantity', e.target.value)}
                         placeholder="Qtà"
-                        min="1"
                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       />
                     </div>
