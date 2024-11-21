@@ -21,7 +21,6 @@ function OrderAgenda() {
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
 
-  // Carica gli ordini dal database
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -68,7 +67,6 @@ function OrderAgenda() {
       );
     });
   };
-
   const deleteOrder = async (orderId) => {
     if (window.confirm('Sei sicuro di voler eliminare questo ordine?')) {
       try {
@@ -96,7 +94,15 @@ function OrderAgenda() {
     if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
     if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
+    if (order.hasAllergies) details.push(`\n⚠️ Allergie:\n${order.allergies}`);
     if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
+    
+    if (order.savoryItems?.length > 0) {
+      details.push('\n🥪 Prodotti Salati:');
+      order.savoryItems.forEach(item => {
+        details.push(`${item.item}: ${item.quantity}`);
+      });
+    }
 
     const message = details.join('\n').trim();
 
@@ -106,7 +112,6 @@ function OrderAgenda() {
       'noopener,noreferrer'
     );
   };
-
   const printOrder = async (order) => {
     const details = [];
     details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
@@ -118,7 +123,15 @@ function OrderAgenda() {
     if (order.waferText) details.push(`\nScritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\nDisegno:\n${order.waferDesign}`);
     if (order.notes) details.push(`\nNote:\n${order.notes}`);
+    if (order.hasAllergies) details.push(`\nAllergie:\n${order.allergies}`);
     if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+    if (order.savoryItems?.length > 0) {
+      details.push('\nProdotti Salati:');
+      order.savoryItems.forEach(item => {
+        details.push(`${item.item}: ${item.quantity}`);
+      });
+    }
 
     const printContent = `
       <html>
@@ -221,7 +234,15 @@ function OrderAgenda() {
             if (order.waferText) details.push(`Scritta: ${order.waferText}`);
             if (order.waferDesign) details.push(`Disegno: ${order.waferDesign}`);
             if (order.notes) details.push(`Note: ${order.notes}`);
+            if (order.hasAllergies) details.push(`Allergie: ${order.allergies}`);
             if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
+            
+            if (order.savoryItems?.length > 0) {
+              details.push('Prodotti Salati:');
+              order.savoryItems.forEach(item => {
+                details.push(`- ${item.item}: ${item.quantity}`);
+              });
+            }
 
             return `<div class="order">${details.join('<br>')}</div>`;
           }).join('')}
@@ -235,6 +256,16 @@ function OrderAgenda() {
     printWindow.print();
     setShowPrintModal(false);
   };
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+          <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-4 md:p-6">
@@ -274,18 +305,18 @@ function OrderAgenda() {
             </Link>
           </div>
         </div>
-  
+
         <h1 className="text-2xl font-bold text-[#8B4513] mb-6 text-center md:text-left">
           {showArchivedOrders ? 'Archivio Ordini' : 'Agenda Ordini'}
         </h1>
-  
+
         {error && (
           <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
-  
-        {/* Barra di ricerca responsive */}
+
+        {/* Search bar */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -298,8 +329,7 @@ function OrderAgenda() {
             />
           </div>
         </div>
-  
-        {/* Modal Stampa */}
+        {/* Print Modal */}
         {showPrintModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg w-full max-w-md mx-4">
@@ -346,16 +376,8 @@ function OrderAgenda() {
             </div>
           </div>
         )}
-  
-        {/* Loading state */}
-        {isLoading ? (
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
-          </div>
-        ) : (
-          /* Continua dal loading state */
-        <>
-        {/* Vista Mobile */}
+
+        {/* Mobile View */}
         <div className="block md:hidden space-y-4">
           {getFilteredOrders()
             .sort((a, b) => {
@@ -370,16 +392,13 @@ function OrderAgenda() {
                   (!order.printed || order.printed === false) ? 'border-l-4 border-red-500' : ''
                 }`}
               >
-                {/* Header della card */}
                 <div className="p-4 border-b">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="font-medium text-[#8B4513]">
                         {format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        {order.time}
-                      </div>
+                      <div className="text-sm text-gray-600">{order.time}</div>
                     </div>
                     {(!order.printed || order.printed === false) && (
                       <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded">
@@ -389,9 +408,7 @@ function OrderAgenda() {
                   </div>
                 </div>
 
-                {/* Contenuto della card */}
                 <div className="p-4 space-y-3">
-                  {/* Info Cliente */}
                   <div>
                     <div className="font-medium">{order.customerName}</div>
                     <div className="text-sm text-gray-600">{order.customerContact}</div>
@@ -402,7 +419,6 @@ function OrderAgenda() {
                     )}
                   </div>
 
-                  {/* Dettagli Ordine */}
                   <div className="space-y-2">
                     {order.description && (
                       <div><span className="font-medium">Descrizione:</span> {order.description}</div>
@@ -418,10 +434,24 @@ function OrderAgenda() {
                         <span className="font-medium">Note:</span> {order.notes}
                       </div>
                     )}
+                    {order.hasAllergies && (
+                      <div className="text-red-600">
+                        <span className="font-medium">Allergie:</span> {order.allergies}
+                      </div>
+                    )}
+                    {order.savoryItems && order.savoryItems.length > 0 && (
+                      <div>
+                        <span className="font-medium">Prodotti Salati:</span>
+                        <ul className="list-disc list-inside pl-2">
+                          {order.savoryItems.map((item, idx) => (
+                            <li key={idx}>{item.item}: {item.quantity}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Azioni */}
                 <div className="border-t px-4 py-3 bg-gray-50 flex justify-end gap-2">
                   <button
                     onClick={() => printOrder(order)}
@@ -459,8 +489,7 @@ function OrderAgenda() {
               </div>
             ))}
         </div>
-
-        {/* Vista Desktop */}
+        {/* Desktop View */}
         <div className="hidden md:block bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -507,7 +536,7 @@ function OrderAgenda() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="line-clamp-2">
+                        <div className="space-y-1">
                           {order.description && (
                             <div><span className="font-medium">Descrizione:</span> {order.description}</div>
                           )}
@@ -520,6 +549,21 @@ function OrderAgenda() {
                           {order.notes && (
                             <div className="text-sm text-gray-600">
                               <span className="font-medium">Note:</span> {order.notes}
+                            </div>
+                          )}
+                          {order.hasAllergies && (
+                            <div className="text-red-600">
+                              <span className="font-medium">Allergie:</span> {order.allergies}
+                            </div>
+                          )}
+                          {order.savoryItems && order.savoryItems.length > 0 && (
+                            <div>
+                              <span className="font-medium">Prodotti Salati:</span>
+                              <ul className="list-disc list-inside pl-2">
+                                {order.savoryItems.map((item, idx) => (
+                                  <li key={idx}>{item.item}: {item.quantity}</li>
+                                ))}
+                              </ul>
                             </div>
                           )}
                         </div>
@@ -564,11 +608,9 @@ function OrderAgenda() {
             </table>
           </div>
         </div>
-      </>
-    )}
-  </div>
-</Layout>
-);
+      </div>
+    </Layout>
+  );
 }
 
 export default OrderAgenda;
