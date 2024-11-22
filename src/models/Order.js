@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 
+// Schema per gli elementi salati
+const SavoryItemSchema = new mongoose.Schema({
+  item: String,
+  quantity: String
+});
+
 const OrderSchema = new mongoose.Schema({
   date: {
     type: String,
@@ -24,8 +30,15 @@ const OrderSchema = new mongoose.Schema({
   deposit: String,
   printed: {
     type: Boolean,
-    default: false // Questo assicura che ogni nuovo ordine abbia printed=false
+    default: false
   },
+  // Nuovi campi aggiunti
+  hasAllergies: {
+    type: Boolean,
+    default: false
+  },
+  allergies: String,
+  savoryItems: [SavoryItemSchema], // Array di prodotti salati
   createdAt: {
     type: Date,
     default: Date.now
