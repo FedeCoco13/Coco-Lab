@@ -20,7 +20,6 @@ function OrderAgenda() {
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
-
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -37,6 +36,7 @@ function OrderAgenda() {
 
     loadOrders();
   }, []);
+
   const filterOrders = () => {
     const today = startOfDay(new Date());
     
@@ -84,25 +84,31 @@ function OrderAgenda() {
   const editOrder = (order) => {
     router.push(`/orders?id=${order._id}`);
   };
-
   const sendWhatsApp = (order) => {
     const details = [];
-    details.push(`📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
+    // Aggiunta intestazione
+    details.push(`🍰 COCO - PASTICCERIA 🍰`);
+    details.push(`👤 ${order.customerName} - ${order.customerContact}`);
+    details.push(`\n📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
     details.push(`⏰ Ora: ${order.time}`);
     
+    if (order.hasAllergies) {
+      details.push(`\n⚠️ ALLERGIE:\n${order.allergies}`);
+    }
+
     if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
     if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
-    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
-    if (order.hasAllergies) details.push(`\n⚠️ Allergie:\n${order.allergies}`);
-    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
     
     if (order.savoryItems?.length > 0) {
       details.push('\n🥪 Prodotti Salati:');
       order.savoryItems.forEach(item => {
-        details.push(`${item.item}: ${item.quantity}`);
+        details.push(`- ${item.item}: ${item.quantity}`);
       });
     }
+
+    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
+    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
 
     const message = details.join('\n').trim();
 
@@ -114,24 +120,30 @@ function OrderAgenda() {
   };
   const printOrder = async (order) => {
     const details = [];
+    // Header con dati principali
     details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
     details.push(`Ora: ${order.time}`);
     details.push(`Cliente: ${order.customerName}`);
-    
     if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
+    
+    // Allergie in cima se presenti
+    if (order.hasAllergies) {
+      details.push(`\n⚠️ ALLERGIE/INTOLLERANZE ⚠️\n${order.allergies.toUpperCase()}`);
+    }
+
     if (order.description) details.push(`\nDescrizione:\n${order.description}`);
     if (order.waferText) details.push(`\nScritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\nDisegno:\n${order.waferDesign}`);
-    if (order.notes) details.push(`\nNote:\n${order.notes}`);
-    if (order.hasAllergies) details.push(`\nAllergie:\n${order.allergies}`);
-    if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
+    
     if (order.savoryItems?.length > 0) {
       details.push('\nProdotti Salati:');
       order.savoryItems.forEach(item => {
         details.push(`${item.item}: ${item.quantity}`);
       });
     }
+
+    if (order.notes) details.push(`\nNote:\n${order.notes}`);
+    if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
 
     const printContent = `
       <html>
@@ -143,11 +155,32 @@ function OrderAgenda() {
             }
             body {
               font-family: Arial;
-              font-size: 12px;
+              font-size: 16px;
               margin: 0;
               padding: 4mm;
               width: 72mm;
               white-space: pre-wrap;
+            }
+            .header {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 3mm;
+            }
+            .allergies {
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+              background-color: #ffe0e0;
+              padding: 2mm;
+              margin: 2mm 0;
+              border: 1px solid #ff0000;
+            }
+            .section {
+              margin: 2mm 0;
+            }
+            .section-title {
+              font-size: 16px;
+              font-weight: bold;
             }
           </style>
         </head>
@@ -175,7 +208,6 @@ function OrderAgenda() {
       toast.error('Errore nell\'aggiornamento dello stato di stampa');
     }
   };
-
   const printMultipleOrders = () => {
     const start = parseISO(dateRange.startDate);
     const end = parseISO(dateRange.endDate);
@@ -199,23 +231,33 @@ function OrderAgenda() {
             }
             body {
               font-family: Arial;
-              font-size: 12px;
+              font-size: 16px;
               margin: 0;
               padding: 4mm;
               width: 72mm;
             }
             .date-range {
               text-align: center;
-              margin-bottom: 3mm;
+              margin-bottom: 4mm;
               font-weight: bold;
+              font-size: 18px;
             }
             .order {
               border-bottom: 1px dashed #000;
-              padding-bottom: 3mm;
-              margin-bottom: 3mm;
+              padding-bottom: 4mm;
+              margin-bottom: 4mm;
             }
             .order:last-child {
               border-bottom: none;
+            }
+            .allergies {
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+              background-color: #ffe0e0;
+              padding: 2mm;
+              margin: 2mm 0;
+              border: 1px solid #ff0000;
             }
           </style>
         </head>
@@ -230,12 +272,15 @@ function OrderAgenda() {
             details.push(`Ora: ${order.time}`);
             details.push(`Cliente: ${order.customerName}`);
             if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
+            
+            // Allergie in evidenza
+            if (order.hasAllergies) {
+              details.push(`<div class="allergies">ALLERGIE: ${order.allergies}</div>`);
+            }
+
             if (order.description) details.push(`Descrizione: ${order.description}`);
             if (order.waferText) details.push(`Scritta: ${order.waferText}`);
             if (order.waferDesign) details.push(`Disegno: ${order.waferDesign}`);
-            if (order.notes) details.push(`Note: ${order.notes}`);
-            if (order.hasAllergies) details.push(`Allergie: ${order.allergies}`);
-            if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
             
             if (order.savoryItems?.length > 0) {
               details.push('Prodotti Salati:');
@@ -243,6 +288,9 @@ function OrderAgenda() {
                 details.push(`- ${item.item}: ${item.quantity}`);
               });
             }
+
+            if (order.notes) details.push(`Note: ${order.notes}`);
+            if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
 
             return `<div class="order">${details.join('<br>')}</div>`;
           }).join('')}
@@ -316,7 +364,7 @@ function OrderAgenda() {
           </div>
         )}
 
-        {/* Search bar */}
+        {/* Barra di ricerca */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -329,7 +377,8 @@ function OrderAgenda() {
             />
           </div>
         </div>
-        {/* Print Modal */}
+
+        {/* Modal Stampa */}
         {showPrintModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg w-full max-w-md mx-4">
@@ -376,8 +425,7 @@ function OrderAgenda() {
             </div>
           </div>
         )}
-
-        {/* Mobile View */}
+        {/* Vista Mobile */}
         <div className="block md:hidden space-y-4">
           {getFilteredOrders()
             .sort((a, b) => {
@@ -420,6 +468,11 @@ function OrderAgenda() {
                   </div>
 
                   <div className="space-y-2">
+                    {order.hasAllergies && (
+                      <div className="text-red-600 font-bold">
+                        <span className="font-medium">ALLERGIE:</span> {order.allergies}
+                      </div>
+                    )}
                     {order.description && (
                       <div><span className="font-medium">Descrizione:</span> {order.description}</div>
                     )}
@@ -429,16 +482,6 @@ function OrderAgenda() {
                     {order.waferDesign && (
                       <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                     )}
-                    {order.notes && (
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Note:</span> {order.notes}
-                      </div>
-                    )}
-                    {order.hasAllergies && (
-                      <div className="text-red-600">
-                        <span className="font-medium">Allergie:</span> {order.allergies}
-                      </div>
-                    )}
                     {order.savoryItems && order.savoryItems.length > 0 && (
                       <div>
                         <span className="font-medium">Prodotti Salati:</span>
@@ -447,6 +490,11 @@ function OrderAgenda() {
                             <li key={idx}>{item.item}: {item.quantity}</li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+                    {order.notes && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Note:</span> {order.notes}
                       </div>
                     )}
                   </div>
@@ -489,7 +537,7 @@ function OrderAgenda() {
               </div>
             ))}
         </div>
-        {/* Desktop View */}
+        {/* Vista Desktop */}
         <div className="hidden md:block bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -537,6 +585,11 @@ function OrderAgenda() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="space-y-1">
+                          {order.hasAllergies && (
+                            <div className="text-red-600 font-bold">
+                              <span className="font-medium">ALLERGIE:</span> {order.allergies}
+                            </div>
+                          )}
                           {order.description && (
                             <div><span className="font-medium">Descrizione:</span> {order.description}</div>
                           )}
@@ -546,16 +599,6 @@ function OrderAgenda() {
                           {order.waferDesign && (
                             <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                           )}
-                          {order.notes && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Note:</span> {order.notes}
-                            </div>
-                          )}
-                          {order.hasAllergies && (
-                            <div className="text-red-600">
-                              <span className="font-medium">Allergie:</span> {order.allergies}
-                            </div>
-                          )}
                           {order.savoryItems && order.savoryItems.length > 0 && (
                             <div>
                               <span className="font-medium">Prodotti Salati:</span>
@@ -564,6 +607,11 @@ function OrderAgenda() {
                                   <li key={idx}>{item.item}: {item.quantity}</li>
                                 ))}
                               </ul>
+                            </div>
+                          )}
+                          {order.notes && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Note:</span> {order.notes}
                             </div>
                           )}
                         </div>
