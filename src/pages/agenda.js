@@ -155,19 +155,19 @@ function OrderAgenda() {
             }
             body {
               font-family: Arial;
-              font-size: 16px;
+              font-size: 18px;
               margin: 0;
               padding: 4mm;
               width: 72mm;
               white-space: pre-wrap;
             }
             .header {
-              font-size: 18px;
+              font-size: 20px;
               font-weight: bold;
               margin-bottom: 3mm;
             }
             .allergies {
-              font-size: 18px;
+              font-size: 22px;
               font-weight: bold;
               text-transform: uppercase;
               background-color: #ffe0e0;
@@ -179,7 +179,7 @@ function OrderAgenda() {
               margin: 2mm 0;
             }
             .section-title {
-              font-size: 16px;
+              font-size: 19px;
               font-weight: bold;
             }
           </style>
@@ -211,7 +211,7 @@ function OrderAgenda() {
   const printMultipleOrders = () => {
     const start = parseISO(dateRange.startDate);
     const end = parseISO(dateRange.endDate);
-
+  
     const ordersInRange = orders.filter(order => {
       const orderDate = parseISO(order.date);
       return isWithinInterval(orderDate, { start, end });
@@ -220,84 +220,114 @@ function OrderAgenda() {
       const dateB = new Date(b.date + 'T' + b.time);
       return dateA - dateB;
     });
-
+  
     const printContent = `
       <html>
         <head>
           <style>
             @page {
-              margin: 2mm;
-              size: 80mm auto;
+              size: A4 landscape;
+              margin: 10mm;
             }
             body {
               font-family: Arial;
-              font-size: 16px;
+              font-size: 12px;
               margin: 0;
-              padding: 4mm;
-              width: 72mm;
+              padding: 0;
             }
-            .date-range {
+            .title {
               text-align: center;
-              margin-bottom: 4mm;
+              font-size: 16px;
               font-weight: bold;
-              font-size: 18px;
+              margin-bottom: 10mm;
             }
-            .order {
-              border-bottom: 1px dashed #000;
-              padding-bottom: 4mm;
-              margin-bottom: 4mm;
+            table {
+              width: 100%;
+              border-collapse: collapse;
             }
-            .order:last-child {
-              border-bottom: none;
+            th {
+              background-color: #8B4513;
+              color: white;
+              padding: 8px;
+              text-align: left;
+              font-size: 12px;
             }
-            .allergies {
-              font-size: 18px;
+            td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              vertical-align: top;
+            }
+            .allergy {
+              color: red;
               font-weight: bold;
-              text-transform: uppercase;
-              background-color: #ffe0e0;
-              padding: 2mm;
-              margin: 2mm 0;
-              border: 1px solid #ff0000;
+            }
+            .date-cell {
+              white-space: nowrap;
+              width: 15%;
+            }
+            .customer-cell {
+              width: 20%;
+            }
+            .details-cell {
+              width: 65%;
+            }
+            ul {
+              margin: 0;
+              padding-left: 20px;
+            }
+            .order-row:nth-child(even) {
+              background-color: #f9f9f9;
             }
           </style>
         </head>
         <body>
-          <div class="date-range">
-            Dal ${format(start, 'd MMMM yyyy', { locale: it })} 
+          <div class="title">
+            Ordini dal ${format(start, 'd MMMM yyyy', { locale: it })} 
             al ${format(end, 'd MMMM yyyy', { locale: it })}
           </div>
-          ${ordersInRange.map(order => {
-            const details = [];
-            details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
-            details.push(`Ora: ${order.time}`);
-            details.push(`Cliente: ${order.customerName}`);
-            if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
-            
-            // Allergie in evidenza
-            if (order.hasAllergies) {
-              details.push(`<div class="allergies">ALLERGIE: ${order.allergies}</div>`);
-            }
-
-            if (order.description) details.push(`Descrizione: ${order.description}`);
-            if (order.waferText) details.push(`Scritta: ${order.waferText}`);
-            if (order.waferDesign) details.push(`Disegno: ${order.waferDesign}`);
-            
-            if (order.savoryItems?.length > 0) {
-              details.push('Prodotti Salati:');
-              order.savoryItems.forEach(item => {
-                details.push(`- ${item.item}: ${item.quantity}`);
-              });
-            }
-
-            if (order.notes) details.push(`Note: ${order.notes}`);
-            if (order.deposit) details.push(`Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
-            return `<div class="order">${details.join('<br>')}</div>`;
-          }).join('')}
+          <table>
+            <thead>
+              <tr>
+                <th>Data e Ora</th>
+                <th>Cliente</th>
+                <th>Dettagli Ordine</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordersInRange.map(order => `
+                <tr class="order-row">
+                  <td class="date-cell">
+                    ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}<br>
+                    ${order.time}
+                  </td>
+                  <td class="customer-cell">
+                    <strong>${order.customerName}</strong><br>
+                    ${order.customerContact || ''}<br>
+                    ${order.deposit ? `Acconto: €${parseFloat(order.deposit).toFixed(2)}` : ''}
+                  </td>
+                  <td class="details-cell">
+                    ${order.hasAllergies ? `<div class="allergy">ALLERGIE: ${order.allergies}</div>` : ''}
+                    ${order.description ? `<strong>Descrizione:</strong> ${order.description}<br>` : ''}
+                    ${order.waferText ? `<strong>Scritta:</strong> ${order.waferText}<br>` : ''}
+                    ${order.waferDesign ? `<strong>Disegno:</strong> ${order.waferDesign}<br>` : ''}
+                    ${order.savoryItems && order.savoryItems.length > 0 ? `
+                      <strong>Prodotti Salati:</strong>
+                      <ul>
+                        ${order.savoryItems.map(item => `
+                          <li>${item.item}: ${item.quantity}</li>
+                        `).join('')}
+                      </ul>
+                    ` : ''}
+                    ${order.notes ? `<strong>Note:</strong> ${order.notes}` : ''}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </body>
       </html>
     `;
-
+  
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
