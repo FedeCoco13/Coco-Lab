@@ -150,29 +150,29 @@ function OrderAgenda() {
         <head>
           <style>
             @page {
-              margin: 2mm;
+              margin: 0mm;
               size: 80mm auto;
             }
             body {
               font-family: Arial;
               font-size: 18px;
               margin: 0;
-              padding: 4mm;
-              width: 72mm;
+              padding: 2mm;
+              width: 76mm;
               white-space: pre-wrap;
             }
             .header {
               font-size: 20px;
               font-weight: bold;
-              margin-bottom: 3mm;
+              margin-bottom: 2mm;
             }
             .allergies {
               font-size: 22px;
               font-weight: bold;
               text-transform: uppercase;
               background-color: #ffe0e0;
-              padding: 2mm;
-              margin: 2mm 0;
+              padding: 1mm;
+              margin: 1mm 0;
               border: 1px solid #ff0000;
             }
             .section {
