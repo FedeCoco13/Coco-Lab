@@ -113,7 +113,7 @@ function OrderAgenda() {
     const message = details.join('\n').trim();
 
     window.open(
-      `https://web.whatsapp.com/send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
+      `whatsapp://send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
       '_blank',
       'noopener,noreferrer'
     );
