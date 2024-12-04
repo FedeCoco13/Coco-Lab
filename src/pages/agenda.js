@@ -16,6 +16,7 @@ function OrderAgenda() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showArchivedOrders, setShowArchivedOrders] = useState(false);
+  const [lastAddedOrderId, setLastAddedOrderId] = useState(null);
   const [dateRange, setDateRange] = useState({
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
@@ -26,6 +27,15 @@ function OrderAgenda() {
         setIsLoading(true);
         const data = await api.getOrders();
         setOrders(data);
+        
+        // Se c'è un ID nell'URL, lo impostiamo come ultimo ordine aggiunto
+        const urlParams = new URLSearchParams(window.location.search);
+        const newOrderId = urlParams.get('newOrder');
+        if (newOrderId) {
+          setLastAddedOrderId(newOrderId);
+          // Rimuoviamo il parametro dall'URL senza ricaricare la pagina
+          window.history.replaceState({}, '', window.location.pathname);
+        }
       } catch (err) {
         setError('Errore nel caricamento degli ordini');
         console.error(err);
@@ -36,6 +46,25 @@ function OrderAgenda() {
 
     loadOrders();
   }, []);
+
+  // Effetto per lo scroll all'ultimo ordine aggiunto
+  useEffect(() => {
+    if (lastAddedOrderId && !isLoading) {
+      const element = document.getElementById(`order-${lastAddedOrderId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-yellow-200');
+        setTimeout(() => {
+          element.classList.remove('bg-yellow-200');
+          element.classList.add('bg-yellow-100');
+          setTimeout(() => {
+            element.classList.remove('bg-yellow-100');
+          }, 2000);
+        }, 2000);
+        setLastAddedOrderId(null);
+      }
+    }
+  }, [lastAddedOrderId, isLoading, orders]);
 
   const filterOrders = () => {
     const today = startOfDay(new Date());
@@ -84,9 +113,9 @@ function OrderAgenda() {
   const editOrder = (order) => {
     router.push(`/orders?id=${order._id}`);
   };
+
   const sendWhatsApp = (order) => {
     const details = [];
-    // Aggiunta intestazione
     details.push(`🍰 COCO - PASTICCERIA 🍰`);
     details.push(`👤 ${order.customerName} - ${order.customerContact}`);
     details.push(`\n📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
@@ -100,10 +129,13 @@ function OrderAgenda() {
     if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
     
-    if (order.savoryItems?.length > 0) {
+    // Modifica della condizione per i prodotti salati
+    if (order.savoryItems?.length > 0 && order.savoryItems.some(item => item.item && item.quantity)) {
       details.push('\n🥪 Prodotti Salati:');
       order.savoryItems.forEach(item => {
-        details.push(`- ${item.item}: ${item.quantity}`);
+        if (item.item && item.quantity) {
+          details.push(`- ${item.item}: ${item.quantity}`);
+        }
       });
     }
 
@@ -126,7 +158,6 @@ function OrderAgenda() {
     details.push(`Cliente: ${order.customerName}`);
     if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
     
-    // Allergie in cima se presenti
     if (order.hasAllergies) {
       details.push(`\n⚠️ ALLERGIE/INTOLLERANZE ⚠️\n${order.allergies.toUpperCase()}`);
     }
@@ -135,10 +166,13 @@ function OrderAgenda() {
     if (order.waferText) details.push(`\nScritta:\n${order.waferText}`);
     if (order.waferDesign) details.push(`\nDisegno:\n${order.waferDesign}`);
     
-    if (order.savoryItems?.length > 0) {
+    // Modifica della condizione per i prodotti salati
+    if (order.savoryItems?.length > 0 && order.savoryItems.some(item => item.item && item.quantity)) {
       details.push('\nProdotti Salati:');
       order.savoryItems.forEach(item => {
-        details.push(`${item.item}: ${item.quantity}`);
+        if (item.item && item.quantity) {
+          details.push(`${item.item}: ${item.quantity}`);
+        }
       });
     }
 
@@ -310,12 +344,14 @@ function OrderAgenda() {
                     ${order.description ? `<strong>Descrizione:</strong> ${order.description}<br>` : ''}
                     ${order.waferText ? `<strong>Scritta:</strong> ${order.waferText}<br>` : ''}
                     ${order.waferDesign ? `<strong>Disegno:</strong> ${order.waferDesign}<br>` : ''}
-                    ${order.savoryItems && order.savoryItems.length > 0 ? `
+                    ${order.savoryItems?.length > 0 && order.savoryItems.some(item => item.item && item.quantity) ? `
                       <strong>Prodotti Salati:</strong>
                       <ul>
-                        ${order.savoryItems.map(item => `
-                          <li>${item.item}: ${item.quantity}</li>
-                        `).join('')}
+                        ${order.savoryItems
+                          .filter(item => item.item && item.quantity)
+                          .map(item => `
+                            <li>${item.item}: ${item.quantity}</li>
+                          `).join('')}
                       </ul>
                     ` : ''}
                     ${order.notes ? `<strong>Note:</strong> ${order.notes}` : ''}
@@ -407,7 +443,6 @@ function OrderAgenda() {
             />
           </div>
         </div>
-
         {/* Modal Stampa */}
         {showPrintModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -455,6 +490,7 @@ function OrderAgenda() {
             </div>
           </div>
         )}
+
         {/* Vista Mobile */}
         <div className="block md:hidden space-y-4">
           {getFilteredOrders()
@@ -466,6 +502,7 @@ function OrderAgenda() {
             .map(order => (
               <div 
                 key={order._id}
+                id={`order-${order._id}`}
                 className={`bg-white rounded-lg shadow-lg overflow-hidden ${
                   (!order.printed || order.printed === false) ? 'border-l-4 border-red-500' : ''
                 }`}
@@ -512,12 +549,14 @@ function OrderAgenda() {
                     {order.waferDesign && (
                       <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                     )}
-                    {order.savoryItems && order.savoryItems.length > 0 && (
+                    {order.savoryItems?.length > 0 && order.savoryItems.some(item => item.item && item.quantity) && (
                       <div>
                         <span className="font-medium">Prodotti Salati:</span>
                         <ul className="list-disc list-inside pl-2">
                           {order.savoryItems.map((item, idx) => (
-                            <li key={idx}>{item.item}: {item.quantity}</li>
+                            item.item && item.quantity && (
+                              <li key={idx}>{item.item}: {item.quantity}</li>
+                            )
                           ))}
                         </ul>
                       </div>
@@ -588,7 +627,8 @@ function OrderAgenda() {
                   })
                   .map(order => (
                     <tr 
-                      key={order._id} 
+                      key={order._id}
+                      id={`order-${order._id}`}
                       className={`hover:bg-amber-50 ${(!order.printed || order.printed === false) ? 'bg-yellow-100' : ''}`}
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -629,12 +669,14 @@ function OrderAgenda() {
                           {order.waferDesign && (
                             <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                           )}
-                          {order.savoryItems && order.savoryItems.length > 0 && (
+                          {order.savoryItems?.length > 0 && order.savoryItems.some(item => item.item && item.quantity) && (
                             <div>
                               <span className="font-medium">Prodotti Salati:</span>
                               <ul className="list-disc list-inside pl-2">
                                 {order.savoryItems.map((item, idx) => (
-                                  <li key={idx}>{item.item}: {item.quantity}</li>
+                                  item.item && item.quantity && (
+                                    <li key={idx}>{item.item}: {item.quantity}</li>
+                                  )
                                 ))}
                               </ul>
                             </div>
