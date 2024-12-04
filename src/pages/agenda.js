@@ -20,6 +20,7 @@ function OrderAgenda() {
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
+
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -37,278 +38,289 @@ function OrderAgenda() {
     loadOrders();
   }, []);
 
-  const filterOrders = () => {
-    const today = startOfDay(new Date());
-    
-    const activeOrders = orders.filter(order => {
-      const orderDate = parseISO(order.date);
-      return !isBefore(orderDate, today);
-    });
+  // ...
+}
+// ...
 
-    const archivedOrders = orders.filter(order => {
-      const orderDate = parseISO(order.date);
-      return isBefore(orderDate, today);
-    });
+const filterOrders = () => {
+  const today = startOfDay(new Date());
+  
+  const activeOrders = orders.filter(order => {
+    const orderDate = parseISO(order.date);
+    return !isBefore(orderDate, today);
+  });
 
-    return { activeOrders, archivedOrders };
-  };
+  const archivedOrders = orders.filter(order => {
+    const orderDate = parseISO(order.date);
+    return isBefore(orderDate, today);
+  });
 
-  const getFilteredOrders = () => {
-    const { activeOrders, archivedOrders } = filterOrders();
-    const ordersToShow = showArchivedOrders ? archivedOrders : activeOrders;
+  return { activeOrders, archivedOrders };
+};
 
-    return ordersToShow.filter(order => {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        order.customerName?.toLowerCase().includes(searchLower) ||
-        order.description?.toLowerCase().includes(searchLower) ||
-        order.waferText?.toLowerCase().includes(searchLower) ||
-        format(parseISO(order.date), 'd MMMM yyyy', { locale: it }).toLowerCase().includes(searchLower)
-      );
-    });
-  };
-  const deleteOrder = async (orderId) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo ordine?')) {
-      try {
-        await api.deleteOrder(orderId);
-        setOrders(orders.filter(order => order._id !== orderId));
-        toast.success('Ordine eliminato con successo');
-      } catch (err) {
-        setError('Errore nell\'eliminazione dell\'ordine');
-        console.error(err);
-        toast.error('Errore nell\'eliminazione dell\'ordine');
-      }
-    }
-  };
+const getFilteredOrders = () => {
+  const { activeOrders, archivedOrders } = filterOrders();
+  const ordersToShow = showArchivedOrders ? archivedOrders : activeOrders;
 
-  const editOrder = (order) => {
-    router.push(`/orders?id=${order._id}`);
-  };
-  const sendWhatsApp = (order) => {
-    const details = [];
-    // Aggiunta intestazione
-    details.push(`🍰 COCO - PASTICCERIA 🍰`);
-    details.push(`👤 ${order.customerName} - ${order.customerContact}`);
-    details.push(`\n📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
-    details.push(`⏰ Ora: ${order.time}`);
-    
-    if (order.hasAllergies) {
-      details.push(`\n⚠️ ALLERGIE:\n${order.allergies}`);
-    }
-
-    if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
-    if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
-    if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
-    
-    if (order.savoryItems?.length > 0) {
-      details.push('\n🥪 Prodotti Salati:');
-      order.savoryItems.forEach(item => {
-        details.push(`- ${item.item}: ${item.quantity}`);
-      });
-    }
-
-    if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
-    if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
-    if (order.savoryItems?.length > 0) {
-      details.push('\n🥪 Prodotti Salati:');
-      order.savoryItems.forEach(item => {
-        details.push(`- ${item.item}: ${item.quantity}`);
-      });
-    }
-
-    const message = details.join('\n').trim();
-
-    window.open(
-      `whatsapp://send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
-      '_blank',
-      'noopener,noreferrer'
+  return ordersToShow.filter(order => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      order.customerName?.toLowerCase().includes(searchLower) ||
+      order.description?.toLowerCase().includes(searchLower) ||
+      order.waferText?.toLowerCase().includes(searchLower) ||
+      format(parseISO(order.date), 'd MMMM yyyy', { locale: it }).toLowerCase().includes(searchLower)
     );
-  };
-  const printOrder = async (order) => {
-    const details = [];
-    // Header con dati principali
-    details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
-    details.push(`Ora: ${order.time}`);
-    details.push(`Cliente: ${order.customerName}`);
-    if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
-    
-    // Allergie in cima se presenti
-    if (order.hasAllergies) {
-      details.push(`\n⚠️ ALLERGIE/INTOLLERANZE ⚠️\n${order.allergies.toUpperCase()}`);
-    }
+  });
+};
 
-    if (order.description) details.push(`\nDescrizione:\n${order.description}`);
-    if (order.waferText) details.push(`\nScritta:\n${order.waferText}`);
-    if (order.waferDesign) details.push(`\nDisegno:\n${order.waferDesign}`);
-    
-    if (order.savoryItems?.length > 0) {
-      details.push('\nProdotti Salati:');
-      order.savoryItems.forEach(item => {
-        details.push(`${item.item}: ${item.quantity}`);
-      });
-    }
-
-    if (order.notes) details.push(`\nNote:\n${order.notes}`);
-    if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
-
-    if (order.savoryItems?.length > 0) {
-      details.push('\nProdotti Salati:');
-      order.savoryItems.forEach(item => {
-        details.push(`${item.item}: ${item.quantity}`);
-      });
-    }
-
-    const printContent = `
-      <html>
-        <head>
-          <style>
-            @page {
-              margin: 0mm;
-              size: 80mm auto;
-            }
-            body {
-              font-family: Arial;
-              font-size: 18px;
-              margin: 0;
-              padding: 2mm;
-              width: 76mm;
-              white-space: pre-wrap;
-            }
-            .header {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 2mm;
-            }
-            .allergies {
-              font-size: 22px;
-              font-weight: bold;
-              text-transform: uppercase;
-              background-color: #ffe0e0;
-              padding: 1mm;
-              margin: 1mm 0;
-              border: 1px solid #ff0000;
-            }
-            .section {
-              margin: 2mm 0;
-            }
-            .section-title {
-              font-size: 19px;
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          ${details.join('\n')}
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
-
+const deleteOrder = async (orderId) => {
+  if (window.confirm('Sei sicuro di voler eliminare questo ordine?')) {
     try {
-      await api.markOrderAsPrinted(order._id);
-      setOrders(prevOrders => 
-        prevOrders.map(o => 
-          o._id === order._id ? {...o, printed: true} : o
-        )
-      );
-      toast.success('Ordine stampato e contrassegnato');
-    } catch (error) {
-      console.error('Errore nell\'aggiornamento dello stato di stampa:', error);
-      toast.error('Errore nell\'aggiornamento dello stato di stampa');
+      await api.deleteOrder(orderId);
+      setOrders(orders.filter(order => order._id !== orderId));
+      toast.success('Ordine eliminato con successo');
+    } catch (err) {
+      setError('Errore nell\'eliminazione dell\'ordine');
+      console.error(err);
+      toast.error('Errore nell\'eliminazione dell\'ordine');
     }
-  };
-  const printMultipleOrders = () => {
-    const start = parseISO(dateRange.startDate);
-    const end = parseISO(dateRange.endDate);
+  }
+};
+
+const editOrder = (order) => {
+  router.push(`/orders?id=${order._id}`);
+};
+
+// ...
+// ...
+
+const sendWhatsApp = (order) => {
+  const details = [];
+  // Aggiunta intestazione
+  details.push(`🍰 COCO - PASTICCERIA 🍰`);
+  details.push(`👤 ${order.customerName} - ${order.customerContact}`);
+  details.push(`\n📅 Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
+  details.push(`⏰ Ora: ${order.time}`);
   
-    const ordersInRange = orders.filter(order => {
-      const orderDate = parseISO(order.date);
-      return isWithinInterval(orderDate, { start, end });
-    }).sort((a, b) => {
-      const dateA = new Date(a.date + 'T' + a.time);
-      const dateB = new Date(b.date + 'T' + b.time);
-      return dateA - dateB;
+  if (order.hasAllergies) {
+    details.push(`\n⚠️ ALLERGIE:\n${order.allergies}`);
+  }
+
+  if (order.description) details.push(`\n📝 Descrizione:\n${order.description}`);
+  if (order.waferText) details.push(`\n✍️ Scritta:\n${order.waferText}`);
+  if (order.waferDesign) details.push(`\n🎨 Disegno:\n${order.waferDesign}`);
+  
+  const hasSavoryItems = order.savoryItems && order.savoryItems.some(item => item.quantity > 0);
+  if (hasSavoryItems) {
+    details.push('\n🥪 Prodotti Salati:');
+    order.savoryItems.forEach(item => {
+      if (item.quantity > 0) {
+        details.push(`- ${item.item}: ${item.quantity}`);
+      }
     });
+  }
+
+  if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
+  if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+  const message = details.join('\n').trim();
+
+  window.open(
+    `whatsapp://send?phone=${order.customerContact.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+};
+
+// ...
+// ...
+
+const printOrder = async (order) => {
+  const details = [];
+  // Header con dati principali
+  details.push(`Data: ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}`);
+  details.push(`Ora: ${order.time}`);
+  details.push(`Cliente: ${order.customerName}`);
+  if (order.customerContact) details.push(`Contatto: ${order.customerContact}`);
   
-    const printContent = `
-      <html>
-        <head>
-          <style>
-            @page {
-              size: A4 landscape;
-              margin: 10mm;
-            }
-            body {
-              font-family: Arial;
-              font-size: 12px;
-              margin: 0;
-              padding: 0;
-            }
-            .title {
-              text-align: center;
-              font-size: 16px;
-              font-weight: bold;
-              margin-bottom: 10mm;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th {
-              background-color: #8B4513;
-              color: white;
-              padding: 8px;
-              text-align: left;
-              font-size: 12px;
-            }
-            td {
-              border: 1px solid #ddd;
-              padding: 8px;
-              vertical-align: top;
-            }
-            .allergy {
-              color: red;
-              font-weight: bold;
-            }
-            .date-cell {
-              white-space: nowrap;
-              width: 15%;
-            }
-            .customer-cell {
-              width: 20%;
-            }
-            .details-cell {
-              width: 65%;
-            }
-            ul {
-              margin: 0;
-              padding-left: 20px;
-            }
-            .order-row:nth-child(even) {
-              background-color: #f9f9f9;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="title">
-            Ordini dal ${format(start, 'd MMMM yyyy', { locale: it })} 
-            al ${format(end, 'd MMMM yyyy', { locale: it })}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Data e Ora</th>
-                <th>Cliente</th>
-                <th>Dettagli Ordine</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ordersInRange.map(order => `
+  // Allergie in cima se presenti
+  if (order.hasAllergies) {
+    details.push(`\n⚠️ ALLERGIE/INTOLLERANZE ⚠️\n${order.allergies.toUpperCase()}`);
+  }
+
+  if (order.description) details.push(`\nDescrizione:\n${order.description}`);
+  if (order.waferText) details.push(`\nScritta:\n${order.waferText}`);
+  if (order.waferDesign) details.push(`\nDisegno:\n${order.waferDesign}`);
+  
+  const hasSavoryItems = order.savoryItems && order.savoryItems.some(item => item.quantity > 0);
+  if (hasSavoryItems) {
+    details.push('\nProdotti Salati:');
+    order.savoryItems.forEach(item => {
+      if (item.quantity > 0) {
+        details.push(`${item.item}: ${item.quantity}`);
+      }
+    });
+  }
+
+  if (order.notes) details.push(`\nNote:\n${order.notes}`);
+  if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+  const printContent = `
+    <html>
+      <head>
+        <style>
+          @page {
+            margin: 0mm;
+            size: 80mm auto;
+          }
+          body {
+            font-family: Arial;
+            font-size: 18px;
+            margin: 0;
+            padding: 2mm;
+            width: 76mm;
+            white-space: pre-wrap;
+          }
+          .header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 2mm;
+          }
+          .allergies {
+            font-size: 22px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #ffe0e0;
+            padding: 1mm;
+            margin: 1mm 0;
+            border: 1px solid #ff0000;
+          }
+          .section {
+            margin: 2mm 0;
+          }
+          .section-title {
+            font-size: 19px;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        ${details.join('\n')}
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  printWindow.print();
+
+  try {
+    await api.markOrderAsPrinted(order._id);
+    setOrders(prevOrders => 
+      prevOrders.map(o => 
+        o._id === order._id ? {...o, printed: true} : o
+      )
+    );
+    toast.success('Ordine stampato e contrassegnato');
+  } catch (error) {
+    console.error('Errore nell\'aggiornamento dello stato di stampa:', error);
+    toast.error('Errore nell\'aggiornamento dello stato di stampa');
+  }
+};
+
+// ...
+// ...
+
+const printMultipleOrders = () => {
+  const start = parseISO(dateRange.startDate);
+  const end = parseISO(dateRange.endDate);
+
+  const ordersInRange = orders.filter(order => {
+    const orderDate = parseISO(order.date);
+    return isWithinInterval(orderDate, { start, end });
+  }).sort((a, b) => {
+    const dateA = new Date(a.date + 'T' + a.time);
+    const dateB = new Date(b.date + 'T' + b.time);
+    return dateA - dateB;
+  });
+
+  const printContent = `
+    <html>
+      <head>
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          body {
+            font-family: Arial;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+          }
+          .title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10mm;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th {
+            background-color: #8B4513;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+          }
+          td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            vertical-align: top;
+          }
+          .allergy {
+            color: red;
+            font-weight: bold;
+          }
+          .date-cell {
+            white-space: nowrap;
+            width: 15%;
+          }
+          .customer-cell {
+            width: 20%;
+          }
+          .details-cell {
+            width: 65%;
+          }
+          ul {
+            margin: 0;
+            padding-left: 20px;
+          }
+          .order-row:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="title">
+          Ordini dal ${format(start, 'd MMMM yyyy', { locale: it })} 
+          al ${format(end, 'd MMMM yyyy', { locale: it })}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Data e Ora</th>
+              <th>Cliente</th>
+              <th>Dettagli Ordine</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ordersInRange.map(order => {
+              const hasSavoryItems = order.savoryItems && order.savoryItems.some(item => item.quantity > 0);
+              return `
                 <tr class="order-row">
                   <td class="date-cell">
                     ${format(parseISO(order.date), 'd MMMM yyyy', { locale: it })}<br>
@@ -324,58 +336,63 @@ function OrderAgenda() {
                     ${order.description ? `<strong>Descrizione:</strong> ${order.description}<br>` : ''}
                     ${order.waferText ? `<strong>Scritta:</strong> ${order.waferText}<br>` : ''}
                     ${order.waferDesign ? `<strong>Disegno:</strong> ${order.waferDesign}<br>` : ''}
-                    ${order.savoryItems && order.savoryItems.length > 0 ? `
+                    ${hasSavoryItems ? `
                       <strong>Prodotti Salati:</strong>
                       <ul>
-                        ${order.savoryItems.map(item => `
+                        ${order.savoryItems.map(item => item.quantity > 0 ? `
                           <li>${item.item}: ${item.quantity}</li>
-                        `).join('')}
+                        ` : '').join('')}
                       </ul>
                     ` : ''}
                     ${order.notes ? `<strong>Note:</strong> ${order.notes}` : ''}
                   </td>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-  
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
-    setShowPrintModal(false);
-  };
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-          <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
-        </div>
-      </Layout>
-    );
-  }
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
 
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  printWindow.print();
+  setShowPrintModal(false);
+};
+
+// ...
+// ...
+
+if (isLoading) {
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        {/* Header responsive */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D] w-full md:w-auto justify-center md:justify-start"
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+        <div className="text-xl text-[#8B4513]">Caricamento ordini...</div>
+      </div>
+    </Layout>
+  );
+}
+
+return (
+  <Layout>
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* Header responsive */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D] w-full md:w-auto justify-center md:justify-start"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>Torna alla Home</span>
+        </Link>
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center"
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Torna alla Home</span>
-          </Link>
-          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-            <button
-              onClick={() => setShowPrintModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 justify-center"
-            >
-              <Printer className="h-5 w-5" />
+          <Printer className="h-5 w-5" />
               <span>Stampa Lista</span>
             </button>
             <button
@@ -469,6 +486,7 @@ function OrderAgenda() {
             </div>
           </div>
         )}
+
         {/* Vista Mobile */}
         <div className="block md:hidden space-y-4">
           {getFilteredOrders()
@@ -526,16 +544,16 @@ function OrderAgenda() {
                     {order.waferDesign && (
                       <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                     )}
-                    {order.savoryItems && order.savoryItems.length > 0 && (
-  <div>
-    <span className="font-medium">Prodotti Salati:</span>
-    <ul className="list-disc list-inside pl-2">
-      {order.savoryItems.map((item, idx) => (
-        <li key={idx}>{item.item}: {item.quantity}</li>
-      ))}
-    </ul>
-  </div>
-)}
+                    {order.savoryItems && order.savoryItems.some(item => item.quantity > 0) && (
+                      <div>
+                        <span className="font-medium">Prodotti Salati:</span>
+                        <ul className="list-disc list-inside pl-2">
+                          {order.savoryItems.map((item, idx) => (
+                            item.quantity > 0 && <li key={idx}>{item.item}: {item.quantity}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {order.notes && (
                       <div className="text-sm text-gray-600">
                         <span className="font-medium">Note:</span> {order.notes}
@@ -643,16 +661,16 @@ function OrderAgenda() {
                           {order.waferDesign && (
                             <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                           )}
-                          {order.savoryItems && order.savoryItems.length > 0 && (
-  <div>
-    <span className="font-medium">Prodotti Salati:</span>
-    <ul className="list-disc list-inside pl-2">
-      {order.savoryItems.map((item, idx) => (
-        <li key={idx}>{item.item}: {item.quantity}</li>
-      ))}
-    </ul>
-  </div>
-)}
+                          {order.savoryItems && order.savoryItems.some(item => item.quantity > 0) && (
+                            <div>
+                              <span className="font-medium">Prodotti Salati:</span>
+                              <ul className="list-disc list-inside pl-2">
+                                {order.savoryItems.map((item, idx) => (
+                                  item.quantity > 0 && <li key={idx}>{item.item}: {item.quantity}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                           {order.notes && (
                             <div className="text-sm text-gray-600">
                               <span className="font-medium">Note:</span> {order.notes}
@@ -703,6 +721,6 @@ function OrderAgenda() {
       </div>
     </Layout>
   );
-}
+
 
 export default OrderAgenda;
