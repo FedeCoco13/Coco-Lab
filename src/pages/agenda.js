@@ -110,6 +110,13 @@ function OrderAgenda() {
     if (order.notes) details.push(`\n📌 Note:\n${order.notes}`);
     if (order.deposit) details.push(`\n💰 Acconto: €${parseFloat(order.deposit).toFixed(2)}`);
 
+    if (order.savoryItems?.length > 0) {
+      details.push('\n🥪 Prodotti Salati:');
+      order.savoryItems.forEach(item => {
+        details.push(`- ${item.item}: ${item.quantity}`);
+      });
+    }
+
     const message = details.join('\n').trim();
 
     window.open(
@@ -144,6 +151,13 @@ function OrderAgenda() {
 
     if (order.notes) details.push(`\nNote:\n${order.notes}`);
     if (order.deposit) details.push(`\nAcconto: €${parseFloat(order.deposit).toFixed(2)}`);
+
+    if (order.savoryItems?.length > 0) {
+      details.push('\nProdotti Salati:');
+      order.savoryItems.forEach(item => {
+        details.push(`${item.item}: ${item.quantity}`);
+      });
+    }
 
     const printContent = `
       <html>
@@ -513,15 +527,15 @@ function OrderAgenda() {
                       <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                     )}
                     {order.savoryItems && order.savoryItems.length > 0 && (
-                      <div>
-                        <span className="font-medium">Prodotti Salati:</span>
-                        <ul className="list-disc list-inside pl-2">
-                          {order.savoryItems.map((item, idx) => (
-                            <li key={idx}>{item.item}: {item.quantity}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+  <div>
+    <span className="font-medium">Prodotti Salati:</span>
+    <ul className="list-disc list-inside pl-2">
+      {order.savoryItems.map((item, idx) => (
+        <li key={idx}>{item.item}: {item.quantity}</li>
+      ))}
+    </ul>
+  </div>
+)}
                     {order.notes && (
                       <div className="text-sm text-gray-600">
                         <span className="font-medium">Note:</span> {order.notes}
@@ -630,15 +644,15 @@ function OrderAgenda() {
                             <div><span className="font-medium">Disegno:</span> {order.waferDesign}</div>
                           )}
                           {order.savoryItems && order.savoryItems.length > 0 && (
-                            <div>
-                              <span className="font-medium">Prodotti Salati:</span>
-                              <ul className="list-disc list-inside pl-2">
-                                {order.savoryItems.map((item, idx) => (
-                                  <li key={idx}>{item.item}: {item.quantity}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+  <div>
+    <span className="font-medium">Prodotti Salati:</span>
+    <ul className="list-disc list-inside pl-2">
+      {order.savoryItems.map((item, idx) => (
+        <li key={idx}>{item.item}: {item.quantity}</li>
+      ))}
+    </ul>
+  </div>
+)}
                           {order.notes && (
                             <div className="text-sm text-gray-600">
                               <span className="font-medium">Note:</span> {order.notes}
