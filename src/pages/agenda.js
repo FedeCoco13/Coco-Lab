@@ -28,11 +28,26 @@ function OrderAgenda() {
         const data = await api.getOrders();
         setOrders(data);
         
-        // Se c'è un ID nell'URL, lo impostiamo come ultimo ordine aggiunto
+        // Controlliamo se c'è un nuovo ordine nell'URL
         const urlParams = new URLSearchParams(window.location.search);
         const newOrderId = urlParams.get('newOrder');
         if (newOrderId) {
-          setLastAddedOrderId(newOrderId);
+          // Impostiamo un breve ritardo per assicurarci che la lista degli ordini sia renderizzata
+          setTimeout(() => {
+            const element = document.getElementById(`order-${newOrderId}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              element.classList.add('bg-yellow-200');
+              setTimeout(() => {
+                element.classList.remove('bg-yellow-200');
+                element.classList.add('bg-yellow-100');
+                setTimeout(() => {
+                  element.classList.remove('bg-yellow-100');
+                }, 2000);
+              }, 2000);
+            }
+          }, 100);
+          
           // Rimuoviamo il parametro dall'URL senza ricaricare la pagina
           window.history.replaceState({}, '', window.location.pathname);
         }
@@ -43,7 +58,7 @@ function OrderAgenda() {
         setIsLoading(false);
       }
     };
-
+  
     loadOrders();
   }, []);
 
