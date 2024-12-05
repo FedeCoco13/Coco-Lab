@@ -16,7 +16,6 @@ function OrderAgenda() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showArchivedOrders, setShowArchivedOrders] = useState(false);
-  const [lastAddedOrderId, setLastAddedOrderId] = useState(null);
   const [dateRange, setDateRange] = useState({
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
@@ -62,26 +61,7 @@ function OrderAgenda() {
     loadOrders();
   }, []);
 
-  // Effetto per lo scroll all'ultimo ordine aggiunto
-  useEffect(() => {
-    if (lastAddedOrderId && !isLoading) {
-      const element = document.getElementById(`order-${lastAddedOrderId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('bg-yellow-200');
-        setTimeout(() => {
-          element.classList.remove('bg-yellow-200');
-          element.classList.add('bg-yellow-100');
-          setTimeout(() => {
-            element.classList.remove('bg-yellow-100');
-          }, 2000);
-        }, 2000);
-        setLastAddedOrderId(null);
-      }
-    }
-  }, [lastAddedOrderId, isLoading, orders]);
-
-  const filterOrders = () => {
+   const filterOrders = () => {
     const today = startOfDay(new Date());
     
     const activeOrders = orders.filter(order => {
