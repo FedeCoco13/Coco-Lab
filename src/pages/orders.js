@@ -60,21 +60,22 @@ export default function OrderManager() {
     try {
       if (id) {
         await api.updateOrder(id, currentOrder);
+        router.push('/agenda');
       } else {
-        const newOrder = {
+        const newOrder = await api.createOrder({
           ...currentOrder,
           printed: false
-        };
-        await api.createOrder(newOrder);
+        });
+        // Reindirizza all'agenda con l'ID del nuovo ordine
+        router.push(`/agenda?newOrder=${newOrder._id}`);
       }
-      router.push('/agenda');
     } catch (err) {
       setError('Errore nel salvataggio dell\'ordine');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
   const handleDepositChange = (e) => {
     const value = e.target.value;
