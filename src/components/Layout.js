@@ -2,14 +2,14 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 
 export default function Layout({ children }) {
+  const router = useRouter();
+  
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       router.push('/login');
     },
   });
-
-  const router = useRouter();
 
   if (status === "loading") {
     return (
@@ -24,7 +24,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden bg-amber-50">
+    <div className="min-h-screen flex flex-col overflow-x-hidden bg-amber-50 text-gray-900">
       <div className="flex-1 relative">
         <main className="w-full h-full overflow-y-auto webkit-overflow-scrolling-touch">
           {children}
