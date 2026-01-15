@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Save, ArrowLeft, EuroIcon, Plus, Minus } from 'lucide-react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { format } from 'date-fns';
+import Layout from '../components/Layout';
+import { api } from '../lib/api';
 
 export default function OrderManager() {
+  const router = useRouter();
+  const { id } = router.query;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentOrder, setCurrentOrder] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     time: '07:00',
     description: '',
     waferText: '',
     waferDesign: '',
     notes: '',
     customerName: '',
-    customerContact: '+39',
+    customerContact: '',
     deposit: '',
     allergies: '',
     hasAllergies: false,
@@ -20,38 +27,60 @@ export default function OrderManager() {
     printed: false
   });
 
+  useEffect(() => {
+    if (id) {
+      const loadOrder = async () => {
+        try {
+          setIsLoading(true);
+          const order = await api.getOrders();
+          const foundOrder = order.find(o => o._id === id);
+          if (foundOrder) {
+            setCurrentOrder({
+              ...foundOrder,
+              allergies: foundOrder.allergies || '',
+              hasAllergies: Boolean(foundOrder.allergies),
+              savoryItems: foundOrder.savoryItems || [{ item: '', quantity: '' }]
+            });
+          }
+        } catch (err) {
+          setError('Errore nel caricamento dell\'ordine');
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadOrder();
+    }
+  }, [id]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
-    // Simulazione salvataggio
-    setTimeout(() => {
-      console.log('Ordine salvato:', currentOrder);
+  
+    try {
+      if (id) {
+        await api.updateOrder(id, currentOrder);
+        router.push('/agenda');
+      } else {
+        const newOrder = await api.createOrder({
+          ...currentOrder,
+          printed: false
+        });
+        // Reindirizza all'agenda con l'ID del nuovo ordine
+        router.push(`/agenda?newOrder=${newOrder._id}`);
+      }
+    } catch (err) {
+      setError('Errore nel salvataggio dell\'ordine');
+      console.error(err);
+    } finally {
       setIsLoading(false);
-      alert('Ordine salvato con successo!');
-    }, 1000);
-  };
+    }
+};
 
   const handleDepositChange = (e) => {
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
       setCurrentOrder({...currentOrder, deposit: value});
-    }
-  };
-
-  const handleContactChange = (e) => {
-    let value = e.target.value;
-    
-    // Se l'utente cerca di cancellare il +39, lo ripristiniamo
-    if (!value.startsWith('+39')) {
-      value = '+39';
-    }
-    
-    // Permetti solo numeri dopo il +39
-    const afterPrefix = value.slice(3);
-    if (afterPrefix === '' || /^\d*$/.test(afterPrefix)) {
-      setCurrentOrder({...currentOrder, customerContact: value});
     }
   };
 
@@ -87,23 +116,30 @@ export default function OrderManager() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-        <div className="text-2xl font-bold text-amber-900">Caricamento...</div>
-      </div>
+      <Layout>
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+          <div className="text-2xl font-bold text-[#8B4513]">Caricamento...</div>
+        </div>
+      </Layout>
     );
   }
-
   return (
-    <div className="min-h-screen bg-amber-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <Layout>
+      <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
-          <button className="flex items-center gap-2 text-amber-900 hover:text-amber-700">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-[#8B4513] hover:text-[#A0522D]"
+          >
             <ArrowLeft className="h-5 w-5" />
             Torna alla Home
-          </button>
-          <button className="px-4 py-2 bg-amber-900 text-white rounded-lg hover:bg-amber-800">
+          </Link>
+          <Link
+            href="/agenda"
+            className="px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D]"
+          >
             Agenda Ordini
-          </button>
+          </Link>
         </div>
 
         {error && (
@@ -113,8 +149,8 @@ export default function OrderManager() {
         )}
 
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-amber-900 mb-6">
-            Nuovo Ordine
+          <h1 className="text-2xl font-bold text-[#8B4513] mb-6">
+            {id ? 'Modifica Ordine' : 'Nuovo Ordine'}
           </h1>
 
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
@@ -130,7 +166,7 @@ export default function OrderManager() {
                     type="date"
                     value={currentOrder.date}
                     onChange={(e) => setCurrentOrder({...currentOrder, date: e.target.value})}
-                    className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                    className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                     required
                   />
                 </div>
@@ -152,7 +188,7 @@ export default function OrderManager() {
                           time: `${e.target.value}:${minutes}`
                         });
                       }}
-                      className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 appearance-none text-gray-900"
+                      className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
                       required
                     >
                       {Array.from({ length: 13 }, (_, i) => i + 7).map(hour => (
@@ -173,7 +209,7 @@ export default function OrderManager() {
                           time: `${hours}:${e.target.value}`
                         });
                       }}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 appearance-none text-gray-900"
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] appearance-none"
                       required
                     >
                       {Array.from({ length: 6 }, (_, i) => i * 10).map(minute => (
@@ -195,7 +231,7 @@ export default function OrderManager() {
               <textarea
                 value={currentOrder.description}
                 onChange={(e) => setCurrentOrder({...currentOrder, description: e.target.value})}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 h-24 text-gray-900"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-24"
                 required
               />
             </div>
@@ -210,7 +246,7 @@ export default function OrderManager() {
                   type="text"
                   value={currentOrder.waferText}
                   onChange={(e) => setCurrentOrder({...currentOrder, waferText: e.target.value})}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                 />
               </div>
 
@@ -222,7 +258,7 @@ export default function OrderManager() {
                   type="text"
                   value={currentOrder.waferDesign}
                   onChange={(e) => setCurrentOrder({...currentOrder, waferDesign: e.target.value})}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                 />
               </div>
             </div>
@@ -235,10 +271,9 @@ export default function OrderManager() {
               <textarea
                 value={currentOrder.notes}
                 onChange={(e) => setCurrentOrder({...currentOrder, notes: e.target.value})}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 h-20 text-gray-900"
+                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
               />
             </div>
-
             {/* Allergie */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -251,7 +286,7 @@ export default function OrderManager() {
                     hasAllergies: e.target.checked,
                     allergies: e.target.checked ? currentOrder.allergies : ''
                   })}
-                  className="rounded border-gray-300 text-amber-900 focus:ring-amber-900"
+                  className="rounded border-gray-300 text-[#8B4513] focus:ring-[#8B4513]"
                 />
                 <label htmlFor="hasAllergies" className="text-sm font-medium text-gray-700">
                   Presenza di Allergie/Intolleranze
@@ -262,7 +297,7 @@ export default function OrderManager() {
                   value={currentOrder.allergies}
                   onChange={(e) => setCurrentOrder({...currentOrder, allergies: e.target.value})}
                   placeholder="Descrivi le allergie/intolleranze..."
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 h-20 text-gray-900"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513] h-20"
                 />
               )}
             </div>
@@ -276,7 +311,7 @@ export default function OrderManager() {
                 <button
                   type="button"
                   onClick={addSavoryItem}
-                  className="flex items-center gap-1 text-amber-900 hover:text-amber-700"
+                  className="flex items-center gap-1 text-[#8B4513] hover:text-[#A0522D]"
                 >
                   <Plus className="h-4 w-4" />
                   Aggiungi
@@ -292,7 +327,7 @@ export default function OrderManager() {
                         value={item.item}
                         onChange={(e) => updateSavoryItem(index, 'item', e.target.value)}
                         placeholder="Articolo"
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       />
                     </div>
                     <div className="w-24">
@@ -301,7 +336,7 @@ export default function OrderManager() {
                         value={item.quantity}
                         onChange={(e) => updateSavoryItem(index, 'quantity', e.target.value)}
                         placeholder="Qtà"
-                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                       />
                     </div>
                     {currentOrder.savoryItems.length > 1 && (
@@ -317,7 +352,6 @@ export default function OrderManager() {
                 ))}
               </div>
             </div>
-
             {/* Cliente e Acconto */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
@@ -328,25 +362,22 @@ export default function OrderManager() {
                   type="text"
                   value={currentOrder.customerName}
                   onChange={(e) => setCurrentOrder({...currentOrder, customerName: e.target.value})}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  WhatsApp Cliente
+                  Contatto Cliente
                 </label>
                 <input
                   type="text"
                   value={currentOrder.customerContact}
-                  onChange={handleContactChange}
-                  placeholder="+39 3XX XXXXXXX"
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900 font-mono"
+                  onChange={(e) => setCurrentOrder({...currentOrder, customerContact: e.target.value})}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   required
-                  maxLength={13}
                 />
-                <p className="text-xs text-gray-500 mt-1">Inserisci solo le cifre dopo +39</p>
               </div>
 
               <div>
@@ -360,7 +391,7 @@ export default function OrderManager() {
                     value={currentOrder.deposit}
                     onChange={handleDepositChange}
                     placeholder="0.00"
-                    className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-amber-900 text-gray-900"
+                    className="w-full p-2 pl-10 border rounded-lg focus:ring-2 focus:ring-[#8B4513]"
                   />
                 </div>
               </div>
@@ -368,24 +399,24 @@ export default function OrderManager() {
 
             {/* Pulsanti */}
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
+              <Link
+                href="/agenda"
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 Annulla
-              </button>
+              </Link>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-900 text-white rounded-lg hover:bg-amber-800 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-[#8B4513] text-white rounded-lg hover:bg-[#A0522D] disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
-                {isLoading ? 'Salvataggio...' : 'Salva'}
+                {isLoading ? 'Salvataggio...' : (id ? 'Aggiorna' : 'Salva')}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
